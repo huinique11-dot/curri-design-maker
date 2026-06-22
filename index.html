@@ -66,6 +66,10 @@
         .info-box {
             background: rgba(255, 255, 255, 0.15); backdrop-filter: blur(10px);
             padding: 10px 20px; border-radius: 15px; text-align: center; flex: 1; margin: 0 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .info-box.time-penalty {
+            transform: scale(1.1); box-shadow: 0 0 20px #ff0844; border: 1px solid #ff0844;
         }
         .info-box .label { font-size: 0.9rem; color: #ffd1dc; }
         .info-box .value { font-size: 1.5rem; font-weight: 900; }
@@ -89,7 +93,7 @@
             border-radius: 15px; display: flex; align-items: center; justify-content: center;
             font-weight: 700; transition: transform 0.15s ease-out, box-shadow 0.2s, left 0.2s, top 0.2s;
             box-shadow: 0 10px 20px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; z-index: 10;
-            pointer-events: auto; /* 핵심 수정: 타일 자체는 터치를 인식하도록 수정 */
+            pointer-events: auto;
         }
         .tile.dragging {
             transition: none !important; z-index: 100 !important; transform: scale(1.1);
@@ -136,8 +140,9 @@
 
         .warning-text {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            font-size: 3rem; font-weight: 900; color: #ff0844; text-shadow: 0 0 20px #fff;
-            pointer-events: none; z-index: 1000; animation: floatUp 1s ease-out forwards;
+            font-size: 2.5rem; font-weight: 900; color: #ff0844; text-shadow: 0 0 20px #fff;
+            pointer-events: none; z-index: 1000; animation: floatUpWarning 1.2s ease-out forwards;
+            white-space: nowrap;
         }
 
         .table-container { width: 100%; max-width: 600px; background: rgba(255,255,255,0.1); border-radius: 15px; padding: 10px; overflow-y: auto; max-height: 50vh; margin-bottom: 20px; }
@@ -149,6 +154,7 @@
         @keyframes popMerge { 0% { transform: scale(1); } 50% { transform: scale(1.3); filter: brightness(1.5); } 100% { transform: scale(1); } }
         @keyframes popDestroy { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); filter: brightness(2); } 100% { transform: scale(0); opacity: 0; } }
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-50px) scale(1.5); opacity: 0; } }
+        @keyframes floatUpWarning { 0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; } 100% { transform: translate(-50%, -150%) scale(1); opacity: 0; } }
         @keyframes pulseItem { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.7); } 50% { box-shadow: 0 0 0 15px rgba(0, 255, 204, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); } }
     </style>
 </head>
@@ -158,7 +164,7 @@
         <h1>🎵 비트 머지 🎵</h1>
         <div class="instruction">
             <strong style="color: #ffd700;">[조작법]</strong> 기호나 글자 카드를 드래그해서 <strong>같은 단계</strong>의 카드 위에 올려 합치세요.<br><br>
-            <strong style="color: #00ffcc;">[아이템 사용법]</strong> 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 <strong style="color: #ff2a85;">터치</strong>한 뒤 다른 음표들을 <strong style="color: #ff2a85;">터치</strong>해 <strong>정확히 4박자</strong>를 채우면 고득점을 얻습니다!
+            <strong style="color: #00ffcc;">[아이템 사용법]</strong> 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 <strong style="color: #ff2a85;">터치</strong>한 뒤 다른 음표들을 <strong style="color: #ff2a85;">터치</strong>해 <strong>정확히 4박자</strong>를 채우면 고득점을 얻습니다! <br><span style="color: #ff0844; font-size: 0.85rem;">(※ 박자 초과 시 10초 차감 페널티!)</span>
         </div>
         <input type="text" id="student-name" placeholder="학생 이름을 입력하세요" autocomplete="off" maxlength="10">
         <button onclick="startGame()">게임 시작하기 (2분)</button>
@@ -167,7 +173,7 @@
 
     <div id="game-screen" class="screen">
         <div class="header-panel">
-            <div class="info-box"><div class="label">남은 시간</div><div class="value" id="time-display">02:00</div></div>
+            <div class="info-box" id="timer-box"><div class="label">남은 시간</div><div class="value" id="time-display" style="color: #00ffcc;">02:00</div></div>
             <div class="info-box"><div class="label">점수</div><div class="value" id="score-display">0</div></div>
         </div>
         <div class="board-wrapper" id="board-wrapper">
@@ -226,6 +232,7 @@
     const screens = { menu: document.getElementById('menu-screen'), game: document.getElementById('game-screen'), result: document.getElementById('result-screen'), teacher: document.getElementById('teacher-screen') };
     const boardBg = document.getElementById('grid-bg'), tileContainer = document.getElementById('tile-container');
     const boardWrapper = document.getElementById('board-wrapper'), scoreDisplay = document.getElementById('score-display'), timeDisplay = document.getElementById('time-display');
+    const timerBox = document.getElementById('timer-box');
 
     for(let i=0; i<16; i++) boardBg.appendChild(document.createElement('div')).className = 'grid-cell';
 
@@ -262,6 +269,7 @@
         
         grid = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]];
         score = 0; isGameOver = false; isSelectionMode = false; selectedRest = null; selectedNotes = [];
+        timeDisplay.style.color = "#00ffcc";
         
         tileContainer.innerHTML = ''; updateScore();
         spawnTile(); spawnTile(); spawnTile(); 
@@ -355,7 +363,7 @@
 
     function showWarningText(text) {
         let el = document.createElement('div'); el.className = 'warning-text'; el.innerText = text;
-        boardWrapper.appendChild(el); setTimeout(() => el.remove(), 1000);
+        boardWrapper.appendChild(el); setTimeout(() => el.remove(), 1200);
     }
 
     function updateScore() { scoreDisplay.innerText = score; }
@@ -363,8 +371,20 @@
     function updateTimer(currentTime) {
         if(!startTime) startTime = currentTime;
         let remaining = GAME_DURATION - (currentTime - startTime);
-        if(remaining <= 0) { remaining = 0; endGame(); } 
-        else { animationFrameId = requestAnimationFrame(updateTimer); }
+        
+        if(remaining <= 0) { 
+            remaining = 0; 
+            timeDisplay.innerText = "00:00";
+            endGame(); 
+            return;
+        } 
+        
+        // 10초 이하일 때 타이머 빨간색 변경 효과
+        if (remaining <= 10000) {
+            timeDisplay.style.color = "#ff0844";
+        }
+        
+        animationFrameId = requestAnimationFrame(updateTimer);
 
         let totalSeconds = Math.floor(remaining / 1000);
         timeDisplay.innerText = `${Math.floor(totalSeconds / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
@@ -411,7 +431,15 @@
                     spawnTile(); spawnTile();
                     renderBoard([], [{r, c}]); 
                 } else if(sum > 4) {
-                    showWarningText("박자 초과!");
+                    // 시간 단축 페널티 적용 (시작 시간을 10초 과거로 당겨서 남은 시간 차감)
+                    startTime -= 10000;
+                    
+                    showWarningText("박자 초과! -10초");
+                    
+                    // 타이머 박스 빨간색 깜빡임 효과
+                    timerBox.classList.add('time-penalty');
+                    setTimeout(() => timerBox.classList.remove('time-penalty'), 300);
+                    
                     grid[selectedRest.r][selectedRest.c] = 0; 
                     isSelectionMode = false; selectedRest = null; selectedNotes = [];
                     renderBoard();
@@ -436,7 +464,6 @@
         let r = parseInt(target.dataset.r);
         let c = parseInt(target.dataset.c);
 
-        // 핵심 수정: 선택 모드일 때는 드래그를 시작하지 않고 바로 탭(터치) 기능 실행
         if (isSelectionMode) {
             handleTap(r, c);
             return;
@@ -478,12 +505,11 @@
         let timeElapsed = performance.now() - dragStartTime;
 
         dragEl.classList.remove('dragging');
-        dragEl.style.pointerEvents = 'auto'; // 복구
+        dragEl.style.pointerEvents = 'auto'; 
         let originalR = dragOrigin.r;
         let originalC = dragOrigin.c;
         dragEl = null;
 
-        // 핵심 수정: 짧은 탭(250ms 이하) 판정 후 제자리일 경우에만 아이템 발동 연결
         if(timeElapsed < 250 && targetR === originalR && targetC === originalC) {
             handleTap(originalR, originalC);
             return;
