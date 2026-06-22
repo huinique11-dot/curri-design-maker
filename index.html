@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>비트 머지 (Beat Merge) - 드래그 퍼즐</title>
+    <title>비트 머지 (Beat Merge) - 음악 퍼즐</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
@@ -211,23 +211,27 @@
 
     const GAME_DURATION = 120000; 
 
+    // 모든 음표/쉼표 기호를 Noto Music 표준에 맞추어 완벽하게 통일 (두께, 스타일 일치)
     const TIER_DATA = {
         1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
-        2: { symbol: "♪", name: "8분<br>음표", beats: 0.5, points: 20 },
-        3: { symbol: "♩", name: "4분<br>음표", beats: 1, points: 40 },
+        2: { symbol: "𝅘𝅥𝅮", name: "8분<br>음표", beats: 0.5, points: 20 },
+        3: { symbol: "𝅘𝅥", name: "4분<br>음표", beats: 1, points: 40 },
         4: { symbol: "𝅗𝅥", name: "2분<br>음표", beats: 2, points: 80 },
         5: { symbol: "𝅝", name: "온음표", beats: 4, points: 160 },
         6: { symbol: "⭐", name: "2마디", beats: 8, points: 700 },
         7: { symbol: "☄️", name: "4마디", beats: 16, points: 900 },
         100: { symbol: "𝄾", name: "8분<br>쉼표", beats: 0.5, points: 20 },
         101: { symbol: "𝄽", name: "4분<br>쉼표", beats: 1, points: 40 },
-        102: { symbol: "𝄜", name: "2분<br>쉼표", beats: 2, points: 80 },
-        103: { symbol: "𝄫", name: "온쉼표<br>(아이템)", beats: 4, points: 160 }
+        102: { symbol: "𝄻", name: "2분<br>쉼표", beats: 2, points: 80 }, // 엑셀 표로 보이던 2분쉼표 기호 완벽 수정 완료
+        103: { symbol: "𝄺", name: "온쉼표<br>(아이템)", beats: 4, points: 160 } // 온쉼표 기호 완벽 수정 완료
     };
 
     let grid = [], score = 0, isGameOver = false, studentName = "";
     let startTime = null, animationFrameId = null;
     let isSelectionMode = false, selectedRest = null, selectedNotes = [];
+    
+    // 강제 교차 생성 플래그 (글자가 나왔으면 무조건 다음엔 기호)
+    let forceNextSymbol = false;
 
     const screens = { menu: document.getElementById('menu-screen'), game: document.getElementById('game-screen'), result: document.getElementById('result-screen'), teacher: document.getElementById('teacher-screen') };
     const boardBg = document.getElementById('grid-bg'), tileContainer = document.getElementById('tile-container');
@@ -269,6 +273,7 @@
         
         grid = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]];
         score = 0; isGameOver = false; isSelectionMode = false; selectedRest = null; selectedNotes = [];
+        forceNextSymbol = false; // 플래그 초기화
         timeDisplay.style.color = "#00ffcc";
         
         tileContainer.innerHTML = ''; updateScore();
@@ -298,7 +303,16 @@
             newTier = (p2 < 0.6) ? 100 : 101;
         }
 
-        let displayType = Math.random() < 0.5 ? 'symbol' : 'text';
+        // 글자가 연속으로 나오는 것을 방지하는 엄격한 로직 추가
+        let displayType = 'symbol';
+        if (!forceNextSymbol) {
+            displayType = Math.random() < 0.5 ? 'symbol' : 'text';
+            if (displayType === 'text') forceNextSymbol = true; // 이번에 글자였으면 다음엔 무조건 기호!
+        } else {
+            displayType = 'symbol';
+            forceNextSymbol = false; // 기호를 냈으니 다시 랜덤 허용
+        }
+
         grid[randCell.r][randCell.c] = { tier: newTier, display: displayType };
         return true;
     }
@@ -379,7 +393,6 @@
             return;
         } 
         
-        // 10초 이하일 때 타이머 빨간색 변경 효과
         if (remaining <= 10000) {
             timeDisplay.style.color = "#ff0844";
         }
@@ -393,6 +406,14 @@
     async function endGame() {
         if(isGameOver) return;
         isGameOver = true; cancelAnimationFrame(animationFrameId);
+        
+        // 공중에 들고 있던(드래그 중이던) 타일이 있다면 강제 초기화하여 유령 카드 방지
+        if (dragEl) {
+            dragEl.classList.remove('dragging');
+            dragEl.style.pointerEvents = 'auto'; 
+            dragEl = null;
+        }
+
         document.getElementById('final-score').innerText = score;
         switchScreen('result');
 
@@ -431,12 +452,9 @@
                     spawnTile(); spawnTile();
                     renderBoard([], [{r, c}]); 
                 } else if(sum > 4) {
-                    // 시간 단축 페널티 적용 (시작 시간을 10초 과거로 당겨서 남은 시간 차감)
                     startTime -= 10000;
-                    
                     showWarningText("박자 초과! -10초");
                     
-                    // 타이머 박스 빨간색 깜빡임 효과
                     timerBox.classList.add('time-penalty');
                     setTimeout(() => timerBox.classList.remove('time-penalty'), 300);
                     
@@ -495,12 +513,13 @@
     boardWrapper.addEventListener('pointerup', (e) => {
         if(!dragEl) return;
         
-        let boardRect = boardWrapper.getBoundingClientRect();
-        let dropX = e.clientX - boardRect.left;
-        let dropY = e.clientY - boardRect.top;
+        // 오류 수정: 가장자리 부분에서 드래그 판정이 빗나가지 않도록 패딩이 제외된 정확한 그리드 기준 계산으로 변경
+        let gridRect = document.getElementById('grid-bg').getBoundingClientRect();
+        let dropX = e.clientX - gridRect.left;
+        let dropY = e.clientY - gridRect.top;
         
-        let targetC = Math.floor(dropX / (boardRect.width / 4));
-        let targetR = Math.floor(dropY / (boardRect.height / 4));
+        let targetC = Math.floor(dropX / (gridRect.width / 4));
+        let targetR = Math.floor(dropY / (gridRect.height / 4));
         
         let timeElapsed = performance.now() - dragStartTime;
 
@@ -534,7 +553,9 @@
         } 
         else if (targetData.tier === sourceData.tier && sourceData.tier !== 103) {
             let nextTier = targetData.tier + 1;
-            let nextDisplay = Math.random() < 0.5 ? 'symbol' : 'text';
+            
+            // 오류 수정: 카드를 합치면 무조건 '기호(Symbol)'로만 진화하여 학습 유도
+            let nextDisplay = 'symbol'; 
 
             grid[targetR][targetC] = { tier: nextTier, display: nextDisplay };
             grid[originalR][originalC] = 0;
