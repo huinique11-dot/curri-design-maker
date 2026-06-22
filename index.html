@@ -130,7 +130,6 @@
         .tier-103 { background: linear-gradient(135deg, #1f1c2c, #928dab); border: 2px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
         .tier-103 .icon, .tier-103 .text-card { color: #fff; text-shadow: 0 0 10px #00ffcc; }
         
-        /* 점(Dot) 아이템 테마 */
         .tier-200 { background: radial-gradient(circle, #5b247a, #1bcedf); border: 2px dashed #fff; box-shadow: 0 0 10px #1bcedf;}
         .tier-200 .icon { color: #fff; text-shadow: 0 0 10px #fff; font-size: min(12vw, 3rem); }
 
@@ -142,7 +141,6 @@
             text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 0px #ff2a85;
             pointer-events: none; z-index: 200; animation: floatUp 0.9s ease-out forwards; text-align: center;
         }
-        /* Perfect 콤보 시 특별 이펙트 */
         .floating-score.perfect {
             color: #ff2a85; font-size: 2.2rem;
             text-shadow: 0 0 15px #fff, 2px 2px 0px #9b51e0;
@@ -221,6 +219,7 @@
 
     const GAME_DURATION = 120000; 
 
+    // 수정 완료: 2분쉼표와 온쉼표의 정확한 유니코드 기호 적용
     const TIER_DATA = {
         1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
         2: { symbol: "𝅘𝅥𝅮", name: "8분<br>음표", beats: 0.5, points: 20 },
@@ -231,16 +230,15 @@
         7: { symbol: "☄️", name: "4마디", beats: 16, points: 900 },
         100: { symbol: "𝄾", name: "8분<br>쉼표", beats: 0.5, points: 20 },
         101: { symbol: "𝄽", name: "4분<br>쉼표", beats: 1, points: 40 },
-        102: { symbol: "𝄻", name: "2분<br>쉼표", beats: 2, points: 80 },
-        103: { symbol: "𝄺", name: "온쉼표<br>(아이템)", beats: 4, points: 160 },
-        200: { symbol: "•", name: "점", beats: 0, points: 50 } // 점 아이템 데이터 추가
+        102: { symbol: "𝄼", name: "2분<br>쉼표", beats: 2, points: 80 }, // 정확한 모자 모양
+        103: { symbol: "𝄻", name: "온쉼표<br>(아이템)", beats: 4, points: 160 }, // 정확한 세숫대야 모양
+        200: { symbol: "•", name: "점", beats: 0, points: 50 } 
     };
 
     let grid = [], score = 0, isGameOver = false, studentName = "";
     let startTime = null, animationFrameId = null;
     let isSelectionMode = false, selectedRest = null, selectedNotes = [];
     
-    // 교차 스폰을 위한 전역 변수 (true면 글자, false면 기호 차례)
     let spawnAlternator = true;
 
     const screens = { menu: document.getElementById('menu-screen'), game: document.getElementById('game-screen'), result: document.getElementById('result-screen'), teacher: document.getElementById('teacher-screen') };
@@ -305,7 +303,6 @@
         let p = Math.random();
         let newTier;
         
-        // 70% 음표, 20% 쉼표, 10% 점 아이템
         if (p < 0.70) {
             let p2 = Math.random();
             newTier = (p2 < 0.6) ? 1 : ((p2 < 0.85) ? 2 : 3);
@@ -313,19 +310,17 @@
             let p2 = Math.random();
             newTier = (p2 < 0.6) ? 100 : 101;
         } else {
-            newTier = 200; // 점(Dot)
+            newTier = 200; 
         }
 
         let displayType = 'symbol';
         if (newTier === 200) {
-            displayType = 'symbol'; // 점 아이템은 기호 모양 고정
+            displayType = 'symbol'; 
         } else {
-            // 글자 -> 기호 -> 글자 완벽 교차 스폰
             displayType = spawnAlternator ? 'text' : 'symbol';
             spawnAlternator = !spawnAlternator; 
         }
 
-        // isDotted 속성을 추가하여 점음표 여부 관리
         grid[randCell.r][randCell.c] = { tier: newTier, display: displayType, isDotted: false };
         return true;
     }
@@ -370,7 +365,6 @@
         
         let data = TIER_DATA[tileData.tier];
         
-        // 점음표 상태일 경우 이름과 기호에 점(.) 반영
         let nameStr = tileData.isDotted ? "점 " + data.name : data.name;
         let symbolStr = tileData.isDotted ? data.symbol + "·" : data.symbol;
 
@@ -440,7 +434,6 @@
         } else if(db) { try { await db.collection("games").add(recordData); } catch (e) {} }
     }
 
-    // 4박자 미션 로직 (점음표 박자 계산 적용)
     function handleTap(r, c) {
         let tileData = grid[r][c];
         if(tileData === 0) return;
@@ -460,7 +453,6 @@
             } else {
                 selectedNotes.push({r, c});
                 
-                // 선택된 타일들의 박자 합산 (점음표는 1.5배)
                 let sum = selectedNotes.reduce((acc, pos) => {
                     let tile = grid[pos.r][pos.c];
                     let beats = TIER_DATA[tile.tier].beats;
@@ -553,14 +545,12 @@
         let sourceData = grid[originalR][originalC];
         let targetData = grid[targetR][targetC];
 
-        // 1. 점 아이템(tier 200)을 음표(tier 1~5)에 적용
         if (sourceData.tier === 200 && targetData.tier >= 1 && targetData.tier <= 5 && !targetData.isDotted) {
             targetData.isDotted = true;
             grid[originalR][originalC] = 0;
             createFloatingScore(targetR, targetC, 50, true, "점음표 획득!");
             spawnTile(); renderBoard(); checkGameOverCondition(); return;
         }
-        // 음표를 점 아이템에 올렸을 경우에도 동일하게 처리
         if (targetData.tier === 200 && sourceData.tier >= 1 && sourceData.tier <= 5 && !sourceData.isDotted) {
             sourceData.isDotted = true;
             grid[targetR][targetC] = sourceData;
@@ -574,17 +564,14 @@
             grid[originalR][originalC] = 0;
             spawnTile(); renderBoard();
         } 
-        // 2. 같은 티어 & 같은 점음표 여부일 때만 병합 가능 (온쉼표, 점 아이템끼리는 병합 불가)
         else if (targetData.tier === sourceData.tier && targetData.isDotted === sourceData.isDotted && sourceData.tier !== 103 && sourceData.tier !== 200) {
             let nextTier = targetData.tier + 1;
             let nextDisplay = 'symbol'; 
             
-            // 크로스 매칭 판별 (글자 + 기호)
             let isPerfect = (sourceData.display !== targetData.display);
             let gainedPoints = TIER_DATA[sourceData.tier].points;
-            if (isPerfect) gainedPoints *= 2; // Perfect 보너스 2배!
+            if (isPerfect) gainedPoints *= 2; 
 
-            // 점음표 상태도 다음 단계로 그대로 유지 (예: 점8분 + 점8분 = 점4분)
             grid[targetR][targetC] = { tier: nextTier, display: nextDisplay, isDotted: targetData.isDotted };
             grid[originalR][originalC] = 0;
             
@@ -623,7 +610,6 @@
                 if(grid[r][c] === 0) isFull = false;
                 else {
                     let current = grid[r][c];
-                    // 가로나 세로에 합칠 수 있는게 있는지 (점음표 상태까지 같아야 함)
                     if(c < 3 && grid[r][c+1] !== 0 && grid[r][c+1].tier === current.tier && grid[r][c+1].isDotted === current.isDotted && current.tier !== 103 && current.tier !== 200) canMerge = true;
                     if(r < 3 && grid[r+1][c] !== 0 && grid[r+1][c].tier === current.tier && grid[r+1][c].isDotted === current.isDotted && current.tier !== 103 && current.tier !== 200) canMerge = true;
                 }
