@@ -42,7 +42,7 @@
         h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 0 15px var(--accent-pink); }
 
         .instruction {
-            white-space: normal; text-align: center; font-size: 0.9rem; color: #ffd1dc; line-height: 1.4;
+            white-space: normal; text-align: center; font-size: 0.85rem; color: #ffd1dc; line-height: 1.4;
             background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin-bottom: 20px; max-width: 400px;
         }
         .instruction span.highlight { color: #ffd700; font-weight: bold; }
@@ -170,9 +170,9 @@
     <div id="menu-screen" class="screen active">
         <h1>🎵 비트 머지 🎵</h1>
         <div class="instruction">
-            <span class="highlight">[점수 2배 꿀팁]</span> 기호와 글자를 <strong>서로 교차해서 합치면 Perfect 점수 2배!</strong><br><br>
-            <span class="highlight">[점(•) 아이템]</span> 점 카드를 음표에 드래그하면 길이가 1.5배인 <strong>점음표</strong>가 됩니다.<br><br>
-            <span style="color: #00ffcc; font-weight:bold;">[미션]</span> <strong>온쉼표(검은색)</strong>를 누르고 음표를 클릭해 <strong>정확히 4박자</strong>를 맞춰 터뜨리세요! (초과 시 10초 페널티)
+            <span class="highlight">[점수 2배 꿀팁]</span> 기호와 글자를 <strong>서로 교차해서 합치면 Perfect!</strong><br><br>
+            <span class="highlight">[박자 완성 보너스]</span> <strong>점음표</strong>와 <strong>반 박자 짧은 음표</strong>를 합치면 온전한 다음 단계 음표가 됩니다! <span style="color:#fff;">(예: 점8분 + 16분 = 4분)</span><br><br>
+            <span style="color: #00ffcc; font-weight:bold;">[미션]</span> <strong>온쉼표(검은색)</strong>를 누르고 다른 음표들을 클릭해 <strong>정확히 4박자</strong>를 맞춰 터뜨리세요!
         </div>
         <input type="text" id="student-name" placeholder="학생 이름을 입력하세요" autocomplete="off" maxlength="10">
         <button onclick="startGame()">게임 시작하기 (2분)</button>
@@ -219,7 +219,6 @@
 
     const GAME_DURATION = 120000; 
 
-    // 수정 완료: 2분쉼표와 온쉼표의 정확한 유니코드 기호 적용
     const TIER_DATA = {
         1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
         2: { symbol: "𝅘𝅥𝅮", name: "8분<br>음표", beats: 0.5, points: 20 },
@@ -230,8 +229,8 @@
         7: { symbol: "☄️", name: "4마디", beats: 16, points: 900 },
         100: { symbol: "𝄾", name: "8분<br>쉼표", beats: 0.5, points: 20 },
         101: { symbol: "𝄽", name: "4분<br>쉼표", beats: 1, points: 40 },
-        102: { symbol: "𝄼", name: "2분<br>쉼표", beats: 2, points: 80 }, // 정확한 모자 모양
-        103: { symbol: "𝄻", name: "온쉼표<br>(아이템)", beats: 4, points: 160 }, // 정확한 세숫대야 모양
+        102: { symbol: "𝄼", name: "2분<br>쉼표", beats: 2, points: 80 }, 
+        103: { symbol: "𝄻", name: "온쉼표<br>(아이템)", beats: 4, points: 160 }, 
         200: { symbol: "•", name: "점", beats: 0, points: 50 } 
     };
 
@@ -545,6 +544,7 @@
         let sourceData = grid[originalR][originalC];
         let targetData = grid[targetR][targetC];
 
+        // 점 아이템 적용
         if (sourceData.tier === 200 && targetData.tier >= 1 && targetData.tier <= 5 && !targetData.isDotted) {
             targetData.isDotted = true;
             grid[originalR][originalC] = 0;
@@ -564,30 +564,60 @@
             grid[originalR][originalC] = 0;
             spawnTile(); renderBoard();
         } 
-        else if (targetData.tier === sourceData.tier && targetData.isDotted === sourceData.isDotted && sourceData.tier !== 103 && sourceData.tier !== 200) {
-            let nextTier = targetData.tier + 1;
-            let nextDisplay = 'symbol'; 
-            
-            let isPerfect = (sourceData.display !== targetData.display);
-            let gainedPoints = TIER_DATA[sourceData.tier].points;
-            if (isPerfect) gainedPoints *= 2; 
+        else {
+            let nextTier = null;
+            let isPerfect = false;
+            let customMsg = null;
+            let gainedPoints = 0;
 
-            grid[targetR][targetC] = { tier: nextTier, display: nextDisplay, isDotted: targetData.isDotted };
-            grid[originalR][originalC] = 0;
-            
-            createFloatingScore(targetR, targetC, gainedPoints, isPerfect, isPerfect ? "Perfect! x2" : null);
-            
-            let destroyed = [];
-            if(nextTier === 7) {
-                createFloatingScore(targetR, targetC, TIER_DATA[7].points);
-                grid[targetR][targetC] = 0; 
-                destroyed.push({r: targetR, c: targetC});
+            // 1. 일반 병합 (같은 티어, 같은 점음표 상태)
+            if (targetData.tier === sourceData.tier && targetData.isDotted === sourceData.isDotted && sourceData.tier !== 103 && sourceData.tier !== 200) {
+                nextTier = targetData.tier + 1;
+                isPerfect = (sourceData.display !== targetData.display); // 글자+기호 교차 확인
+                gainedPoints = TIER_DATA[sourceData.tier].points;
+                if (isPerfect) { gainedPoints *= 2; customMsg = "Perfect! x2"; }
+            } 
+            // 2. 보완 병합 (점음표 + 반 박자 작은 일반 음표 = 다음 단계 음표)
+            else if (sourceData.isDotted !== targetData.isDotted && sourceData.tier !== 103 && targetData.tier !== 103 && sourceData.tier !== 200 && targetData.tier !== 200) {
+                // 음표끼리(1~6) 또는 쉼표끼리(100~102)만 보완 병합 허용
+                let isNoteMerge = (sourceData.tier >= 1 && sourceData.tier <= 6 && targetData.tier >= 1 && targetData.tier <= 6);
+                let isRestMerge = (sourceData.tier >= 100 && sourceData.tier <= 102 && targetData.tier >= 100 && targetData.tier <= 102);
+                
+                if (isNoteMerge || isRestMerge) {
+                    if (sourceData.isDotted && targetData.tier === sourceData.tier - 1) {
+                        nextTier = sourceData.tier + 1;
+                    } else if (targetData.isDotted && sourceData.tier === targetData.tier - 1) {
+                        nextTier = targetData.tier + 1;
+                    }
+
+                    if (nextTier) {
+                        isPerfect = (sourceData.display !== targetData.display); 
+                        gainedPoints = TIER_DATA[sourceData.tier].points + TIER_DATA[targetData.tier].points;
+                        if (isPerfect) { gainedPoints *= 2; customMsg = "박자 완성! x2"; }
+                        else { customMsg = "박자 완성!"; isPerfect = true; } // 특수 이펙트를 위해 isPerfect true 처리
+                    }
+                }
             }
 
-            spawnTile();
-            renderBoard([{r: targetR, c: targetC}], destroyed);
-        } else {
-            renderBoard();
+            // 병합 성공 시 처리
+            if (nextTier) {
+                grid[targetR][targetC] = { tier: nextTier, display: 'symbol', isDotted: false }; // 완성된 음표는 무조건 기호 형태, 점음표 제거됨
+                grid[originalR][originalC] = 0;
+                
+                createFloatingScore(targetR, targetC, gainedPoints, isPerfect, customMsg);
+                
+                let destroyed = [];
+                if(nextTier === 7) {
+                    createFloatingScore(targetR, targetC, TIER_DATA[7].points);
+                    grid[targetR][targetC] = 0; 
+                    destroyed.push({r: targetR, c: targetC});
+                }
+
+                spawnTile();
+                renderBoard([{r: targetR, c: targetC}], destroyed);
+            } else {
+                renderBoard(); // 병합 불가 시 제자리
+            }
         }
 
         checkGameOverCondition();
@@ -601,17 +631,41 @@
         }
     });
 
+    // 게임 오버 조건 판별 함수도 새로운 병합 규칙에 맞춰 업데이트
     function checkGameOverCondition() {
         let isFull = true;
         let canMerge = false;
         
+        const checkMerge = (a, b) => {
+            if (a === 0 || b === 0) return true; 
+            if (a.tier === 103 || b.tier === 103) return false;
+            
+            // 점 아이템 적용 가능 여부
+            if ((a.tier === 200 && b.tier >= 1 && b.tier <= 5 && !b.isDotted) || 
+                (b.tier === 200 && a.tier >= 1 && a.tier <= 5 && !a.isDotted)) return true;
+                
+            // 일반 병합 가능 여부
+            if (a.tier === b.tier && a.isDotted === b.isDotted && a.tier !== 200) return true;
+            
+            // 보완 병합(점음표+반박자 음표) 가능 여부
+            if (a.isDotted !== b.isDotted && a.tier !== 200 && b.tier !== 200) {
+                let isNoteMerge = (a.tier >= 1 && a.tier <= 6 && b.tier >= 1 && b.tier <= 6);
+                let isRestMerge = (a.tier >= 100 && a.tier <= 102 && b.tier >= 100 && b.tier <= 102);
+                if (isNoteMerge || isRestMerge) {
+                    if (a.isDotted && b.tier === a.tier - 1) return true;
+                    if (b.isDotted && a.tier === b.tier - 1) return true;
+                }
+            }
+            return false;
+        };
+
         for(let r=0; r<4; r++) {
             for(let c=0; c<4; c++) {
-                if(grid[r][c] === 0) isFull = false;
-                else {
-                    let current = grid[r][c];
-                    if(c < 3 && grid[r][c+1] !== 0 && grid[r][c+1].tier === current.tier && grid[r][c+1].isDotted === current.isDotted && current.tier !== 103 && current.tier !== 200) canMerge = true;
-                    if(r < 3 && grid[r+1][c] !== 0 && grid[r+1][c].tier === current.tier && grid[r+1][c].isDotted === current.isDotted && current.tier !== 103 && current.tier !== 200) canMerge = true;
+                if(grid[r][c] === 0) {
+                    isFull = false;
+                } else {
+                    if (c < 3 && checkMerge(grid[r][c], grid[r][c+1])) canMerge = true;
+                    if (r < 3 && checkMerge(grid[r][c], grid[r+1][c])) canMerge = true;
                 }
             }
         }
