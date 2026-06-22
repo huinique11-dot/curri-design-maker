@@ -42,9 +42,10 @@
         h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 0 15px var(--accent-pink); }
 
         .instruction {
-            white-space: normal; text-align: center; font-size: 0.95rem; color: #ffd1dc; line-height: 1.4;
+            white-space: normal; text-align: center; font-size: 0.9rem; color: #ffd1dc; line-height: 1.4;
             background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin-bottom: 20px; max-width: 400px;
         }
+        .instruction span.highlight { color: #ffd700; font-weight: bold; }
 
         input {
             padding: 15px 25px; font-size: 1.2rem; border-radius: 30px; border: none; outline: none;
@@ -110,7 +111,7 @@
         }
         .tile .text-card {
             font-family: 'Noto Sans KR', sans-serif;
-            font-size: min(4vw, 1.1rem); line-height: 1.3; color: #111;
+            font-size: min(3.8vw, 1.0rem); line-height: 1.3; color: #111;
             text-align: center; font-weight: 900; white-space: normal;
             text-shadow: 0 0 8px rgba(255,255,255,0.8);
         }
@@ -128,6 +129,10 @@
         .tier-102 { background: linear-gradient(135deg, #d4af37, #8a6a1c); }
         .tier-103 { background: linear-gradient(135deg, #1f1c2c, #928dab); border: 2px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
         .tier-103 .icon, .tier-103 .text-card { color: #fff; text-shadow: 0 0 10px #00ffcc; }
+        
+        /* 점(Dot) 아이템 테마 */
+        .tier-200 { background: radial-gradient(circle, #5b247a, #1bcedf); border: 2px dashed #fff; box-shadow: 0 0 10px #1bcedf;}
+        .tier-200 .icon { color: #fff; text-shadow: 0 0 10px #fff; font-size: min(12vw, 3rem); }
 
         .tile.active-item { animation: pulseItem 1s infinite; z-index: 30; }
         .tile.selected { transform: scale(0.85); box-shadow: 0 0 0 5px #ff2a85; }
@@ -135,17 +140,21 @@
         .floating-score {
             position: absolute; font-size: 2rem; font-weight: 900; color: #ffd700;
             text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 0px #ff2a85;
-            pointer-events: none; z-index: 200; animation: floatUp 0.8s ease-out forwards;
+            pointer-events: none; z-index: 200; animation: floatUp 0.9s ease-out forwards; text-align: center;
+        }
+        /* Perfect 콤보 시 특별 이펙트 */
+        .floating-score.perfect {
+            color: #ff2a85; font-size: 2.2rem;
+            text-shadow: 0 0 15px #fff, 2px 2px 0px #9b51e0;
         }
 
         .warning-text {
             position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
             font-size: 2.5rem; font-weight: 900; color: #ff0844; text-shadow: 0 0 20px #fff;
-            pointer-events: none; z-index: 1000; animation: floatUpWarning 1.2s ease-out forwards;
-            white-space: nowrap;
+            pointer-events: none; z-index: 1000; animation: floatUpWarning 1.2s ease-out forwards; white-space: nowrap;
         }
 
-        .table-container { width: 100%; max-width: 600px; background: rgba(255,255,255,0.1); border-radius: 15px; padding: 10px; overflow-y: auto; max-height: 50vh; margin-bottom: 20px; }
+        .table-container { width: 100%; max-width: 600px; background: rgba(255,255,255,0.1); border-radius: 15px; padding: 10px; overflow-y: auto; max-height: 45vh; margin-bottom: 20px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.2); }
         th { background: rgba(0,0,0,0.3); font-weight: 900; }
@@ -163,12 +172,13 @@
     <div id="menu-screen" class="screen active">
         <h1>🎵 비트 머지 🎵</h1>
         <div class="instruction">
-            <strong style="color: #ffd700;">[조작법]</strong> 기호나 글자 카드를 드래그해서 <strong>같은 단계</strong>의 카드 위에 올려 합치세요.<br><br>
-            <strong style="color: #00ffcc;">[아이템 사용법]</strong> 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 <strong style="color: #ff2a85;">터치</strong>한 뒤 다른 음표들을 <strong style="color: #ff2a85;">터치</strong>해 <strong>정확히 4박자</strong>를 채우면 고득점을 얻습니다! <br><span style="color: #ff0844; font-size: 0.85rem;">(※ 박자 초과 시 10초 차감 페널티!)</span>
+            <span class="highlight">[점수 2배 꿀팁]</span> 기호와 글자를 <strong>서로 교차해서 합치면 Perfect 점수 2배!</strong><br><br>
+            <span class="highlight">[점(•) 아이템]</span> 점 카드를 음표에 드래그하면 길이가 1.5배인 <strong>점음표</strong>가 됩니다.<br><br>
+            <span style="color: #00ffcc; font-weight:bold;">[미션]</span> <strong>온쉼표(검은색)</strong>를 누르고 음표를 클릭해 <strong>정확히 4박자</strong>를 맞춰 터뜨리세요! (초과 시 10초 페널티)
         </div>
         <input type="text" id="student-name" placeholder="학생 이름을 입력하세요" autocomplete="off" maxlength="10">
         <button onclick="startGame()">게임 시작하기 (2분)</button>
-        <button onclick="showTeacherBoard()" style="background: transparent; box-shadow: none; font-size: 1rem; margin-top: 10px; text-decoration: underline;">교사 대시보드</button>
+        <button onclick="showTeacherBoard()" style="background: transparent; box-shadow: none; font-size: 1rem; margin-top: 5px; text-decoration: underline;">교사 대시보드</button>
     </div>
 
     <div id="game-screen" class="screen">
@@ -211,7 +221,6 @@
 
     const GAME_DURATION = 120000; 
 
-    // 모든 음표/쉼표 기호를 Noto Music 표준에 맞추어 완벽하게 통일 (두께, 스타일 일치)
     const TIER_DATA = {
         1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
         2: { symbol: "𝅘𝅥𝅮", name: "8분<br>음표", beats: 0.5, points: 20 },
@@ -222,16 +231,17 @@
         7: { symbol: "☄️", name: "4마디", beats: 16, points: 900 },
         100: { symbol: "𝄾", name: "8분<br>쉼표", beats: 0.5, points: 20 },
         101: { symbol: "𝄽", name: "4분<br>쉼표", beats: 1, points: 40 },
-        102: { symbol: "𝄻", name: "2분<br>쉼표", beats: 2, points: 80 }, // 엑셀 표로 보이던 2분쉼표 기호 완벽 수정 완료
-        103: { symbol: "𝄺", name: "온쉼표<br>(아이템)", beats: 4, points: 160 } // 온쉼표 기호 완벽 수정 완료
+        102: { symbol: "𝄻", name: "2분<br>쉼표", beats: 2, points: 80 },
+        103: { symbol: "𝄺", name: "온쉼표<br>(아이템)", beats: 4, points: 160 },
+        200: { symbol: "•", name: "점", beats: 0, points: 50 } // 점 아이템 데이터 추가
     };
 
     let grid = [], score = 0, isGameOver = false, studentName = "";
     let startTime = null, animationFrameId = null;
     let isSelectionMode = false, selectedRest = null, selectedNotes = [];
     
-    // 강제 교차 생성 플래그 (글자가 나왔으면 무조건 다음엔 기호)
-    let forceNextSymbol = false;
+    // 교차 스폰을 위한 전역 변수 (true면 글자, false면 기호 차례)
+    let spawnAlternator = true;
 
     const screens = { menu: document.getElementById('menu-screen'), game: document.getElementById('game-screen'), result: document.getElementById('result-screen'), teacher: document.getElementById('teacher-screen') };
     const boardBg = document.getElementById('grid-bg'), tileContainer = document.getElementById('tile-container');
@@ -273,7 +283,7 @@
         
         grid = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]];
         score = 0; isGameOver = false; isSelectionMode = false; selectedRest = null; selectedNotes = [];
-        forceNextSymbol = false; // 플래그 초기화
+        spawnAlternator = true; 
         timeDisplay.style.color = "#00ffcc";
         
         tileContainer.innerHTML = ''; updateScore();
@@ -295,25 +305,28 @@
         let p = Math.random();
         let newTier;
         
-        if (p < 0.80) {
+        // 70% 음표, 20% 쉼표, 10% 점 아이템
+        if (p < 0.70) {
             let p2 = Math.random();
             newTier = (p2 < 0.6) ? 1 : ((p2 < 0.85) ? 2 : 3);
-        } else {
+        } else if (p < 0.90) {
             let p2 = Math.random();
             newTier = (p2 < 0.6) ? 100 : 101;
-        }
-
-        // 글자가 연속으로 나오는 것을 방지하는 엄격한 로직 추가
-        let displayType = 'symbol';
-        if (!forceNextSymbol) {
-            displayType = Math.random() < 0.5 ? 'symbol' : 'text';
-            if (displayType === 'text') forceNextSymbol = true; // 이번에 글자였으면 다음엔 무조건 기호!
         } else {
-            displayType = 'symbol';
-            forceNextSymbol = false; // 기호를 냈으니 다시 랜덤 허용
+            newTier = 200; // 점(Dot)
         }
 
-        grid[randCell.r][randCell.c] = { tier: newTier, display: displayType };
+        let displayType = 'symbol';
+        if (newTier === 200) {
+            displayType = 'symbol'; // 점 아이템은 기호 모양 고정
+        } else {
+            // 글자 -> 기호 -> 글자 완벽 교차 스폰
+            displayType = spawnAlternator ? 'text' : 'symbol';
+            spawnAlternator = !spawnAlternator; 
+        }
+
+        // isDotted 속성을 추가하여 점음표 여부 관리
+        grid[randCell.r][randCell.c] = { tier: newTier, display: displayType, isDotted: false };
         return true;
     }
 
@@ -340,7 +353,7 @@
         });
 
         destroyedTiles.forEach(pos => {
-            let el = createTileDOM(pos.r, pos.c, {tier: 7, display: 'symbol'}); 
+            let el = createTileDOM(pos.r, pos.c, {tier: 7, display: 'symbol', isDotted: false}); 
             el.classList.add('destroy');
             setTimeout(() => el.remove(), 400);
         });
@@ -356,23 +369,30 @@
         tile.dataset.c = c;
         
         let data = TIER_DATA[tileData.tier];
-        if(tileData.display === 'text') {
-            tile.innerHTML = `<div class="text-card">${data.name}</div>`;
+        
+        // 점음표 상태일 경우 이름과 기호에 점(.) 반영
+        let nameStr = tileData.isDotted ? "점 " + data.name : data.name;
+        let symbolStr = tileData.isDotted ? data.symbol + "·" : data.symbol;
+
+        if(tileData.display === 'text' && tileData.tier !== 200) {
+            tile.innerHTML = `<div class="text-card">${nameStr}</div>`;
         } else {
-            tile.innerHTML = `<div class="icon">${data.symbol}</div>`;
+            tile.innerHTML = `<div class="icon">${symbolStr}</div>`;
         }
 
         tileContainer.appendChild(tile);
         return tile;
     }
 
-    function createFloatingScore(r, c, addedScore) {
+    function createFloatingScore(r, c, addedScore, isPerfect = false, customText = null) {
         let fs = document.createElement('div');
-        fs.className = 'floating-score'; fs.innerText = '+' + addedScore;
-        fs.style.left = `calc(${c * 25}% + 10%)`; fs.style.top = `calc(${r * 25}% + 10%)`;
+        fs.className = 'floating-score' + (isPerfect ? ' perfect' : '');
+        fs.innerHTML = customText ? `${customText}<br>+${addedScore}` : `+${addedScore}`;
+        fs.style.left = `calc(${c * 25}% + 10%)`;
+        fs.style.top = `calc(${r * 25}% + 10%)`;
         tileContainer.appendChild(fs);
         score += addedScore; updateScore();
-        setTimeout(() => fs.remove(), 800);
+        setTimeout(() => fs.remove(), 1000);
     }
 
     function showWarningText(text) {
@@ -393,12 +413,9 @@
             return;
         } 
         
-        if (remaining <= 10000) {
-            timeDisplay.style.color = "#ff0844";
-        }
+        if (remaining <= 10000) { timeDisplay.style.color = "#ff0844"; }
         
         animationFrameId = requestAnimationFrame(updateTimer);
-
         let totalSeconds = Math.floor(remaining / 1000);
         timeDisplay.innerText = `${Math.floor(totalSeconds / 60).toString().padStart(2, '0')}:${(totalSeconds % 60).toString().padStart(2, '0')}`;
     }
@@ -407,7 +424,6 @@
         if(isGameOver) return;
         isGameOver = true; cancelAnimationFrame(animationFrameId);
         
-        // 공중에 들고 있던(드래그 중이던) 타일이 있다면 강제 초기화하여 유령 카드 방지
         if (dragEl) {
             dragEl.classList.remove('dragging');
             dragEl.style.pointerEvents = 'auto'; 
@@ -424,6 +440,7 @@
         } else if(db) { try { await db.collection("games").add(recordData); } catch (e) {} }
     }
 
+    // 4박자 미션 로직 (점음표 박자 계산 적용)
     function handleTap(r, c) {
         let tileData = grid[r][c];
         if(tileData === 0) return;
@@ -442,10 +459,17 @@
                 selectedNotes.splice(index, 1); renderBoard();
             } else {
                 selectedNotes.push({r, c});
-                let sum = selectedNotes.reduce((acc, pos) => acc + TIER_DATA[grid[pos.r][pos.c].tier].beats, 0);
+                
+                // 선택된 타일들의 박자 합산 (점음표는 1.5배)
+                let sum = selectedNotes.reduce((acc, pos) => {
+                    let tile = grid[pos.r][pos.c];
+                    let beats = TIER_DATA[tile.tier].beats;
+                    if (tile.isDotted) beats *= 1.5;
+                    return acc + beats;
+                }, 0);
                 
                 if(sum === 4) {
-                    createFloatingScore(r, c, 1000);
+                    createFloatingScore(r, c, 1000, true, "MISSION CLEAR!");
                     grid[selectedRest.r][selectedRest.c] = 0; 
                     selectedNotes.forEach(pos => grid[pos.r][pos.c] = 0); 
                     isSelectionMode = false; selectedRest = null; selectedNotes = [];
@@ -482,14 +506,9 @@
         let r = parseInt(target.dataset.r);
         let c = parseInt(target.dataset.c);
 
-        if (isSelectionMode) {
-            handleTap(r, c);
-            return;
-        }
+        if (isSelectionMode) { handleTap(r, c); return; }
         
-        dragOrigin = {r, c};
-        dragEl = target;
-        dragStartTime = performance.now();
+        dragOrigin = {r, c}; dragEl = target; dragStartTime = performance.now();
 
         let rect = dragEl.getBoundingClientRect();
         dragOffset.x = e.clientX - rect.left;
@@ -501,19 +520,15 @@
 
     boardWrapper.addEventListener('pointermove', (e) => {
         if(!dragEl || isGameOver) return;
-        
         let boardRect = boardWrapper.getBoundingClientRect();
         let x = e.clientX - boardRect.left - dragOffset.x;
         let y = e.clientY - boardRect.top - dragOffset.y;
-        
-        dragEl.style.left = `${x}px`;
-        dragEl.style.top = `${y}px`;
+        dragEl.style.left = `${x}px`; dragEl.style.top = `${y}px`;
     });
 
     boardWrapper.addEventListener('pointerup', (e) => {
         if(!dragEl) return;
         
-        // 오류 수정: 가장자리 부분에서 드래그 판정이 빗나가지 않도록 패딩이 제외된 정확한 그리드 기준 계산으로 변경
         let gridRect = document.getElementById('grid-bg').getBoundingClientRect();
         let dropX = e.clientX - gridRect.left;
         let dropY = e.clientY - gridRect.top;
@@ -530,37 +545,50 @@
         dragEl = null;
 
         if(timeElapsed < 250 && targetR === originalR && targetC === originalC) {
-            handleTap(originalR, originalC);
-            return;
+            handleTap(originalR, originalC); return;
         }
-
-        if(targetR < 0 || targetR >= 4 || targetC < 0 || targetC >= 4) {
-            renderBoard(); return;
-        }
-
-        if(targetR === originalR && targetC === originalC) {
-            renderBoard(); return;
-        }
+        if(targetR < 0 || targetR >= 4 || targetC < 0 || targetC >= 4) { renderBoard(); return; }
+        if(targetR === originalR && targetC === originalC) { renderBoard(); return; }
 
         let sourceData = grid[originalR][originalC];
         let targetData = grid[targetR][targetC];
 
+        // 1. 점 아이템(tier 200)을 음표(tier 1~5)에 적용
+        if (sourceData.tier === 200 && targetData.tier >= 1 && targetData.tier <= 5 && !targetData.isDotted) {
+            targetData.isDotted = true;
+            grid[originalR][originalC] = 0;
+            createFloatingScore(targetR, targetC, 50, true, "점음표 획득!");
+            spawnTile(); renderBoard(); checkGameOverCondition(); return;
+        }
+        // 음표를 점 아이템에 올렸을 경우에도 동일하게 처리
+        if (targetData.tier === 200 && sourceData.tier >= 1 && sourceData.tier <= 5 && !sourceData.isDotted) {
+            sourceData.isDotted = true;
+            grid[targetR][targetC] = sourceData;
+            grid[originalR][originalC] = 0;
+            createFloatingScore(targetR, targetC, 50, true, "점음표 획득!");
+            spawnTile(); renderBoard(); checkGameOverCondition(); return;
+        }
+
         if(targetData === 0) {
             grid[targetR][targetC] = sourceData;
             grid[originalR][originalC] = 0;
-            spawnTile();
-            renderBoard();
+            spawnTile(); renderBoard();
         } 
-        else if (targetData.tier === sourceData.tier && sourceData.tier !== 103) {
+        // 2. 같은 티어 & 같은 점음표 여부일 때만 병합 가능 (온쉼표, 점 아이템끼리는 병합 불가)
+        else if (targetData.tier === sourceData.tier && targetData.isDotted === sourceData.isDotted && sourceData.tier !== 103 && sourceData.tier !== 200) {
             let nextTier = targetData.tier + 1;
-            
-            // 오류 수정: 카드를 합치면 무조건 '기호(Symbol)'로만 진화하여 학습 유도
             let nextDisplay = 'symbol'; 
+            
+            // 크로스 매칭 판별 (글자 + 기호)
+            let isPerfect = (sourceData.display !== targetData.display);
+            let gainedPoints = TIER_DATA[sourceData.tier].points;
+            if (isPerfect) gainedPoints *= 2; // Perfect 보너스 2배!
 
-            grid[targetR][targetC] = { tier: nextTier, display: nextDisplay };
+            // 점음표 상태도 다음 단계로 그대로 유지 (예: 점8분 + 점8분 = 점4분)
+            grid[targetR][targetC] = { tier: nextTier, display: nextDisplay, isDotted: targetData.isDotted };
             grid[originalR][originalC] = 0;
             
-            createFloatingScore(targetR, targetC, TIER_DATA[sourceData.tier].points);
+            createFloatingScore(targetR, targetC, gainedPoints, isPerfect, isPerfect ? "Perfect! x2" : null);
             
             let destroyed = [];
             if(nextTier === 7) {
@@ -582,8 +610,7 @@
         if(dragEl) {
             dragEl.classList.remove('dragging');
             dragEl.style.pointerEvents = 'auto';
-            dragEl = null;
-            renderBoard();
+            dragEl = null; renderBoard();
         }
     });
 
@@ -596,14 +623,13 @@
                 if(grid[r][c] === 0) isFull = false;
                 else {
                     let current = grid[r][c];
-                    if(c < 3 && grid[r][c+1] !== 0 && grid[r][c+1].tier === current.tier && current.tier !== 103) canMerge = true;
-                    if(r < 3 && grid[r+1][c] !== 0 && grid[r+1][c].tier === current.tier && current.tier !== 103) canMerge = true;
+                    // 가로나 세로에 합칠 수 있는게 있는지 (점음표 상태까지 같아야 함)
+                    if(c < 3 && grid[r][c+1] !== 0 && grid[r][c+1].tier === current.tier && grid[r][c+1].isDotted === current.isDotted && current.tier !== 103 && current.tier !== 200) canMerge = true;
+                    if(r < 3 && grid[r+1][c] !== 0 && grid[r+1][c].tier === current.tier && grid[r+1][c].isDotted === current.isDotted && current.tier !== 103 && current.tier !== 200) canMerge = true;
                 }
             }
         }
-        if(isFull && !canMerge) {
-            setTimeout(endGame, 500);
-        }
+        if(isFull && !canMerge) { setTimeout(endGame, 500); }
     }
 </script>
 </body>
