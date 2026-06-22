@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>비트 머지 (Beat Merge) - 음악 기호 퍼즐</title>
+    <title>비트 머지 (Beat Merge) - 드래그 퍼즐</title>
     
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* 음악 기호를 예쁘게 렌더링하기 위해 Noto Music 폰트 추가 */
+        /* Noto Music 폰트로 정확한 음악 기호 렌더링, 텍스트는 Noto Sans KR 사용 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Music&family=Nunito:wght@700;900&family=Noto+Sans+KR:wght@500;700;900&display=swap');
         
         :root {
@@ -24,16 +24,17 @@
         * {
             box-sizing: border-box; margin: 0; padding: 0;
             word-break: keep-all; white-space: nowrap;
-            font-family: 'Noto Music', 'Nunito', 'Noto Sans KR', sans-serif;
             user-select: none; -webkit-tap-highlight-color: transparent;
         }
 
         body {
             background: var(--bg-gradient); color: var(--text-light);
+            font-family: 'Nunito', 'Noto Sans KR', sans-serif;
             height: 100vh; overflow: hidden;
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
+        /* 화면 전환 처리 */
         .screen {
             display: none; flex-direction: column; align-items: center; justify-content: center;
             width: 100%; height: 100%; padding: 20px;
@@ -43,14 +44,13 @@
         h1 { font-size: 2.5rem; margin-bottom: 10px; text-shadow: 0 0 15px var(--accent-pink); }
 
         .instruction {
-            white-space: normal; text-align: center; font-size: 0.95rem; color: #ffd1dc;
+            white-space: normal; text-align: center; font-size: 0.95rem; color: #ffd1dc; line-height: 1.4;
             background: rgba(0,0,0,0.3); padding: 15px; border-radius: 15px; margin-bottom: 20px; max-width: 400px;
         }
 
         input {
             padding: 15px 25px; font-size: 1.2rem; border-radius: 30px; border: none; outline: none;
-            text-align: center; margin-bottom: 20px; background: rgba(255, 255, 255, 0.9);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3); font-weight: 700;
+            text-align: center; margin-bottom: 20px; background: rgba(255, 255, 255, 0.9); font-weight: 700;
         }
 
         button {
@@ -72,10 +72,11 @@
         .info-box .label { font-size: 0.9rem; color: #ffd1dc; }
         .info-box .value { font-size: 1.5rem; font-weight: 900; }
 
+        /* 게임 보드 */
         .board-wrapper {
             position: relative; background: var(--board-bg); padding: 10px; border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.4); backdrop-filter: blur(15px);
-            touch-action: none; cursor: pointer; 
+            touch-action: none; cursor: pointer;
         }
 
         .grid-container {
@@ -89,23 +90,33 @@
         .tile {
             position: absolute; width: calc(25% - 7.5px); height: calc(25% - 7.5px);
             border-radius: 15px; display: flex; align-items: center; justify-content: center;
-            font-weight: 900; transition: transform 0.15s ease-in-out, box-shadow 0.2s, opacity 0.2s;
+            font-weight: 700; transition: transform 0.15s ease-out, box-shadow 0.2s, left 0.2s, top 0.2s;
             box-shadow: 0 10px 20px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; z-index: 10;
+        }
+        /* 드래그 중인 타일은 애니메이션 해제 & 위로 띄움 */
+        .tile.dragging {
+            transition: none !important; z-index: 100 !important; transform: scale(1.1);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5); opacity: 0.9;
         }
         .tile.merged { animation: popMerge 0.3s ease-out; z-index: 20; }
         .tile.destroy { animation: popDestroy 0.4s ease-out forwards; }
 
-        /* 음표/쉼표 기호를 크고 진하게 꽉 채움 */
+        /* 기호 디자인: 얇고 명확하게 */
         .tile .icon { 
-            font-size: min(16vw, 4.5rem); /* 박스에 가득 차도록 크기 확대 */
-            line-height: 1; 
-            color: #1a1a1a; /* 매우 진한 색상 */
-            -webkit-text-stroke: 2px #000; /* 테두리를 줘서 굵기 극대화 */
-            text-shadow: 0 0 15px rgba(255,255,255,0.6);
+            font-family: 'Noto Music', sans-serif;
+            font-size: min(15vw, 4rem); line-height: 1; color: #222;
+            text-shadow: 0 0 10px rgba(255,255,255,0.8);
+            font-weight: normal; /* 얇은 꼬리 유지 */
+        }
+        /* 한글 카드 디자인 */
+        .tile .text-card {
+            font-family: 'Noto Sans KR', sans-serif;
+            font-size: min(4vw, 1.1rem); line-height: 1.3; color: #111;
+            text-align: center; font-weight: 900; white-space: normal;
+            text-shadow: 0 0 8px rgba(255,255,255,0.8);
         }
 
-        /* === [타일 색상 테마] === */
-        /* 음표 테마 */
+        /* 타일 테마 */
         .tier-1 { background: linear-gradient(135deg, #74ebd5, #9face6); }
         .tier-2 { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
         .tier-3 { background: linear-gradient(135deg, #fbc2eb, #a6c1ee); }
@@ -114,22 +125,22 @@
         .tier-6 { background: linear-gradient(135deg, #f093fb, #f5576c); box-shadow: 0 0 20px #f093fb; }
         .tier-7 { background: linear-gradient(135deg, #ff0844, #ffb199); box-shadow: 0 0 30px #ff0844; }
 
-        /* 쉼표 테마 (음표와 확실히 구분되는 차분한 톤) */
+        /* 쉼표 테마 */
         .tier-100 { background: linear-gradient(135deg, #a8c0ff, #3f2b96); }
         .tier-101 { background: linear-gradient(135deg, #bdc3c7, #2c3e50); }
         .tier-102 { background: linear-gradient(135deg, #d4af37, #8a6a1c); }
-        /* 온쉼표 (아이템) - 매우 특별해 보이게 디자인 */
+        /* 온쉼표 아이템 */
         .tier-103 { background: linear-gradient(135deg, #1f1c2c, #928dab); border: 2px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
-        .tier-103 .icon { color: #fff; -webkit-text-stroke: 1px #00ffcc; text-shadow: 0 0 20px #00ffcc; }
+        .tier-103 .icon, .tier-103 .text-card { color: #fff; text-shadow: 0 0 10px #00ffcc; }
 
-        /* === [아이템 선택 모드 효과] === */
+        /* 선택 모드 효과 */
         .tile.active-item { animation: pulseItem 1s infinite; z-index: 30; }
-        .tile.selected { transform: scale(0.85); opacity: 0.8; box-shadow: 0 0 0 5px #ff2a85; }
+        .tile.selected { transform: scale(0.85); box-shadow: 0 0 0 5px #ff2a85; }
 
         .floating-score {
             position: absolute; font-size: 2rem; font-weight: 900; color: #ffd700;
             text-shadow: 0 0 10px rgba(255,215,0,0.8), 2px 2px 0px #ff2a85;
-            pointer-events: none; z-index: 100; animation: floatUp 0.8s ease-out forwards;
+            pointer-events: none; z-index: 200; animation: floatUp 0.8s ease-out forwards;
         }
 
         .warning-text {
@@ -147,9 +158,7 @@
         @keyframes popMerge { 0% { transform: scale(1); } 50% { transform: scale(1.3); filter: brightness(1.5); } 100% { transform: scale(1); } }
         @keyframes popDestroy { 0% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); filter: brightness(2); } 100% { transform: scale(0); opacity: 0; } }
         @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-50px) scale(1.5); opacity: 0; } }
-        @keyframes pulseItem { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.7); transform: scale(1); } 50% { box-shadow: 0 0 0 15px rgba(0, 255, 204, 0); transform: scale(1.05); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); transform: scale(1); } }
-
-        @media (max-width: 400px) { h1 { font-size: 2rem; } .tile .icon { font-size: min(18vw, 4rem); } }
+        @keyframes pulseItem { 0% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0.7); } 50% { box-shadow: 0 0 0 15px rgba(0, 255, 204, 0); } 100% { box-shadow: 0 0 0 0 rgba(0, 255, 204, 0); } }
     </style>
 </head>
 <body>
@@ -157,9 +166,8 @@
     <div id="menu-screen" class="screen active">
         <h1>🎵 비트 머지 🎵</h1>
         <div class="instruction">
-            스와이프/드래그하여 같은 모양을 합치세요!<br><br>
-            <strong style="color: #00ffcc;">[아이템 사용법]</strong><br>
-            가끔 등장하는 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 터치한 뒤 다른 음표들을 터치해 <strong>정확히 4박자</strong>를 채우면 전부 터지며 고득점을 얻습니다! (초과 시 실패 및 아이템 파괴)
+            <strong style="color: #ffd700;">[조작법]</strong> 기호나 글자 카드를 드래그해서 <strong>같은 단계</strong>의 카드 위에 올려 합치세요.<br><br>
+            <strong style="color: #00ffcc;">[아이템 사용법]</strong> 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 터치한 뒤 다른 음표들을 터치해 <strong>정확히 4박자</strong>를 채우면 전부 터지며 고득점을 얻습니다!
         </div>
         <input type="text" id="student-name" placeholder="학생 이름을 입력하세요" autocomplete="off" maxlength="10">
         <button onclick="startGame()">게임 시작하기 (2분)</button>
@@ -196,41 +204,35 @@
     </div>
 
 <script>
-    // ===== 기본 설정 =====
+    // ===== 기본 설정 및 Firebase =====
     const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT_ID.firebaseapp.com", projectId: "YOUR_PROJECT_ID" };
     let db = null; let isLocalMode = true;
 
     if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
         try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); isLocalMode = false; } 
-        catch(e) { console.warn("Firebase 연결 실패. 로컬 모드로 전환합니다."); }
+        catch(e) { console.warn("Firebase 로컬 모드로 전환합니다."); }
     }
 
     const GAME_DURATION = 120000; 
 
-    // 모든 타일(음표+쉼표) 데이터 및 박자(beats) 정의
-    const TILE_DATA = {
-        // 음표 시리즈
-        1: { icon: "♬", beats: 0.25, points: 10, type: 'note' },
-        2: { icon: "♪", beats: 0.5, points: 20, type: 'note' },
-        3: { icon: "♩", beats: 1, points: 40, type: 'note' },
-        4: { icon: "𝅗𝅥", beats: 2, points: 80, type: 'note' },
-        5: { icon: "𝅝", beats: 4, points: 160, type: 'note' },
-        6: { icon: "⭐", beats: 8, points: 700, type: 'note' },
-        7: { icon: "☄️", beats: 16, points: 900, type: 'note' },
-        // 쉼표 시리즈
-        100: { icon: "𝄾", beats: 0.5, points: 20, type: 'rest' }, // 8분쉼표
-        101: { icon: "𝄽", beats: 1, points: 40, type: 'rest' }, // 4분쉼표
-        102: { icon: "𝄜", beats: 2, points: 80, type: 'rest' }, // 2분쉼표
-        103: { icon: "𝄫", beats: 4, points: 160, type: 'rest', isItem: true } // 온쉼표 (아이템 역할)
+    // 모든 타일(음표+쉼표) 데이터 정의 (16분음표 기호 단일형 𝅘𝅥𝅯 사용)
+    const TIER_DATA = {
+        1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
+        2: { symbol: "♪", name: "8분<br>음표", beats: 0.5, points: 20 },
+        3: { symbol: "♩", name: "4분<br>음표", beats: 1, points: 40 },
+        4: { symbol: "𝅗𝅥", name: "2분<br>음표", beats: 2, points: 80 },
+        5: { symbol: "𝅝", name: "온음표", beats: 4, points: 160 },
+        6: { symbol: "⭐", name: "2마디", beats: 8, points: 700 },
+        7: { symbol: "☄️", name: "4마디", beats: 16, points: 900 },
+        100: { symbol: "𝄾", name: "8분<br>쉼표", beats: 0.5, points: 20 },
+        101: { symbol: "𝄽", name: "4분<br>쉼표", beats: 1, points: 40 },
+        102: { symbol: "𝄜", name: "2분<br>쉼표", beats: 2, points: 80 },
+        103: { symbol: "𝄫", name: "온쉼표<br>(아이템)", beats: 4, points: 160 }
     };
 
-    let grid = [], score = 0, isGameOver = false, isProcessing = false, studentName = "";
+    let grid = [], score = 0, isGameOver = false, studentName = "";
     let startTime = null, animationFrameId = null;
-    
-    // 아이템(선택 모드) 관련 변수
-    let isSelectionMode = false;
-    let selectedRest = null; // {r, c}
-    let selectedNotes = []; // 배열
+    let isSelectionMode = false, selectedRest = null, selectedNotes = [];
 
     const screens = { menu: document.getElementById('menu-screen'), game: document.getElementById('game-screen'), result: document.getElementById('result-screen'), teacher: document.getElementById('teacher-screen') };
     const boardBg = document.getElementById('grid-bg'), tileContainer = document.getElementById('tile-container');
@@ -242,15 +244,13 @@
         Object.values(screens).forEach(s => s.classList.remove('active'));
         screens[screenKey].classList.add('active');
     }
-
     function goToMenu() { switchScreen('menu'); cancelAnimationFrame(animationFrameId); }
 
-    // ===== 대시보드 로직 =====
+    // ===== 대시보드 =====
     async function showTeacherBoard() {
         switchScreen('teacher');
         const tbody = document.getElementById('leaderboard-body');
         tbody.innerHTML = "<tr><td colspan='4'>데이터 불러오는 중...</td></tr>";
-        
         try {
             let dataList = [];
             if (isLocalMode) {
@@ -260,29 +260,28 @@
                 const snapshot = await db.collection("games").orderBy("score", "desc").limit(50).get();
                 snapshot.forEach(doc => dataList.push(doc.data()));
             }
-
             tbody.innerHTML = "";
             if (dataList.length === 0) return tbody.innerHTML = "<tr><td colspan='4'>기록이 없습니다.</td></tr>";
-            
             let rank = 1;
-            dataList.forEach(data => {
-                tbody.innerHTML += `<tr><td>${rank++}</td><td>${data.name}</td><td style="color:#ffd700; font-weight:bold;">${data.score}</td><td style="font-size:0.8rem;">${new Date(data.date).toLocaleDateString()}</td></tr>`;
-            });
+            dataList.forEach(data => { tbody.innerHTML += `<tr><td>${rank++}</td><td>${data.name}</td><td style="color:#ffd700; font-weight:bold;">${data.score}</td><td style="font-size:0.8rem;">${new Date(data.date).toLocaleDateString()}</td></tr>`; });
         } catch(e) { tbody.innerHTML = "<tr><td colspan='4'>오류가 발생했습니다.</td></tr>"; }
     }
 
-    // ===== 게임 메인 로직 =====
+    // ===== 게임 초기화 및 생성 =====
     function startGame() {
         const nameInput = document.getElementById('student-name').value.trim();
         if(!nameInput) return alert("이름을 입력해주세요!");
         studentName = nameInput;
         
+        // grid 배열에 이제 단순히 숫자가 아닌 { tier, displayType } 객체를 저장 (0은 빈칸)
         grid = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]];
-        score = 0; isGameOver = false; isProcessing = false;
-        isSelectionMode = false; selectedRest = null; selectedNotes = [];
+        score = 0; isGameOver = false; isSelectionMode = false; selectedRest = null; selectedNotes = [];
         
         tileContainer.innerHTML = ''; updateScore();
-        spawnTile(); spawnTile(); renderBoard();
+        
+        // 시작 시 타일 3개 생성
+        spawnTile(); spawnTile(); spawnTile(); 
+        renderBoard();
 
         startTime = performance.now();
         cancelAnimationFrame(animationFrameId);
@@ -290,30 +289,35 @@
         switchScreen('game');
     }
 
-    // 음표와 쉼표 스폰 확률 조정
+    // 빈 공간 중 하나에 타일 생성 (글자와 기호 50:50 비율)
     function spawnTile() {
         let emptyCells = [];
         for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(grid[r][c] === 0) emptyCells.push({r, c});
-        if(emptyCells.length === 0) return;
+        if(emptyCells.length === 0) return false;
 
         let randCell = emptyCells[Math.floor(Math.random() * emptyCells.length)];
         let p = Math.random();
         let newTier;
         
+        // 80% 음표, 20% 쉼표
         if (p < 0.80) {
-            // 80% 확률로 음표 등장
             let p2 = Math.random();
             newTier = (p2 < 0.6) ? 1 : ((p2 < 0.85) ? 2 : 3);
         } else {
-            // 20% 확률로 쉼표 등장
             let p2 = Math.random();
-            newTier = (p2 < 0.6) ? 100 : 101; // 8분쉼표 또는 4분쉼표
+            newTier = (p2 < 0.6) ? 100 : 101;
         }
-        grid[randCell.r][randCell.c] = newTier;
+
+        // 50% 확률로 글자 카드(text) 또는 기호 카드(symbol) 생성
+        let displayType = Math.random() < 0.5 ? 'symbol' : 'text';
+
+        grid[randCell.r][randCell.c] = { tier: newTier, display: displayType };
+        return true;
     }
 
+    // ===== 화면 그리기 =====
     function renderBoard(mergedTiles = [], destroyedTiles = []) {
-        tileContainer.innerHTML = '';
+        tileContainer.innerHTML = ''; // 드래그 이벤트 독립을 위해 매번 다시 그리지 않고 관리할 수도 있지만, 안정성을 위해 리렌더링
         const getPos = (index) => `calc(${index * 25}% + ${index * 2.5}px)`;
 
         for(let r=0; r<4; r++) {
@@ -335,20 +339,30 @@
         });
 
         destroyedTiles.forEach(pos => {
-            let el = createTileDOM(pos.r, pos.c, 7); // 파괴 이펙트는 4마디 블록용이었으나 공용으로 사용
+            let el = createTileDOM(pos.r, pos.c, {tier: 7, display: 'symbol'}); 
             el.classList.add('destroy');
             setTimeout(() => el.remove(), 400);
         });
     }
 
-    function createTileDOM(r, c, tier) {
+    function createTileDOM(r, c, tileData) {
         let tile = document.createElement('div');
-        tile.className = `tile tier-${tier}`;
+        tile.className = `tile tier-${tileData.tier}`;
         tile.style.left = `calc(${c * 25}% + ${c * 2.5}px)`;
         tile.style.top = `calc(${r * 25}% + ${r * 2.5}px)`;
-        let data = TILE_DATA[tier];
-        // 이름표(<div class="name">)를 없애고 아이콘만 출력
-        tile.innerHTML = `<div class="icon">${data.icon}</div>`;
+        
+        // 데이터 속성으로 위치 저장 (드래그 시 식별용)
+        tile.dataset.r = r;
+        tile.dataset.c = c;
+        
+        let data = TIER_DATA[tileData.tier];
+        // 설정된 디스플레이 타입에 따라 아이콘 또는 텍스트 렌더링
+        if(tileData.display === 'text') {
+            tile.innerHTML = `<div class="text-card">${data.name}</div>`;
+        } else {
+            tile.innerHTML = `<div class="icon">${data.symbol}</div>`;
+        }
+
         tileContainer.appendChild(tile);
         return tile;
     }
@@ -363,10 +377,8 @@
     }
 
     function showWarningText(text) {
-        let el = document.createElement('div');
-        el.className = 'warning-text'; el.innerText = text;
-        boardWrapper.appendChild(el);
-        setTimeout(() => el.remove(), 1000);
+        let el = document.createElement('div'); el.className = 'warning-text'; el.innerText = text;
+        boardWrapper.appendChild(el); setTimeout(() => el.remove(), 1000);
     }
 
     function updateScore() { scoreDisplay.innerText = score; }
@@ -391,145 +403,198 @@
         if (isLocalMode) {
             let records = JSON.parse(localStorage.getItem("beatMergeRecords") || "[]");
             records.push(recordData); localStorage.setItem("beatMergeRecords", JSON.stringify(records));
-        } else if(db) { try { await db.collection("games").add(recordData); } catch (e) { console.error(e); } }
+        } else if(db) { try { await db.collection("games").add(recordData); } catch (e) {} }
     }
 
-    // ===== 터치(탭) 로직 - 아이템 사용 기믹 =====
+    // ===== 탭 (아이템 사용 기믹) =====
     function handleTap(r, c) {
-        let tier = grid[r][c];
-        if(tier === 0) return;
+        let tileData = grid[r][c];
+        if(tileData === 0) return;
 
         if(!isSelectionMode) {
-            // 온쉼표(103)를 탭했을 때만 선택 모드 발동
-            if(tier === 103) {
-                isSelectionMode = true;
-                selectedRest = {r, c};
-                renderBoard();
+            // 온쉼표(103) 터치 시 발동
+            if(tileData.tier === 103) {
+                isSelectionMode = true; selectedRest = {r, c}; renderBoard();
             }
         } else {
-            // 1. 발동한 온쉼표를 다시 누르면 취소
             if(r === selectedRest.r && c === selectedRest.c) {
                 isSelectionMode = false; selectedRest = null; selectedNotes = []; renderBoard(); return;
             }
 
-            // 2. 다른 음표/쉼표를 눌러서 타겟팅
             let index = selectedNotes.findIndex(pos => pos.r === r && pos.c === c);
             if(index > -1) {
-                selectedNotes.splice(index, 1); // 선택 해제
-                renderBoard();
+                selectedNotes.splice(index, 1); renderBoard();
             } else {
-                selectedNotes.push({r, c}); // 선택 추가
-                
-                // 선택된 박자 합산 계산
-                let sum = selectedNotes.reduce((acc, pos) => acc + TILE_DATA[grid[pos.r][pos.c]].beats, 0);
+                selectedNotes.push({r, c});
+                let sum = selectedNotes.reduce((acc, pos) => acc + TIER_DATA[grid[pos.r][pos.c].tier].beats, 0);
                 
                 if(sum === 4) {
-                    // 성공! (정확히 한 마디(4박자))
-                    createFloatingScore(r, c, 1000); // 아이템 소거 보너스 1000점!
-                    grid[selectedRest.r][selectedRest.c] = 0; // 온쉼표 파괴
-                    selectedNotes.forEach(pos => grid[pos.r][pos.c] = 0); // 선택한 타일들 파괴
+                    createFloatingScore(r, c, 1000);
+                    grid[selectedRest.r][selectedRest.c] = 0; 
+                    selectedNotes.forEach(pos => grid[pos.r][pos.c] = 0); 
                     isSelectionMode = false; selectedRest = null; selectedNotes = [];
-                    renderBoard([], [{r, c}]); // 이펙트 출력
+                    // 빈 공간 채우기
+                    spawnTile(); spawnTile();
+                    renderBoard([], [{r, c}]); 
                 } else if(sum > 4) {
-                    // 실패! (박자 초과)
-                    showWarningText("실패!");
-                    grid[selectedRest.r][selectedRest.c] = 0; // 패널티: 온쉼표 아이템 파괴
+                    showWarningText("박자 초과!");
+                    grid[selectedRest.r][selectedRest.c] = 0; 
                     isSelectionMode = false; selectedRest = null; selectedNotes = [];
                     renderBoard();
                 } else {
-                    // 아직 4박자가 안됨 (계속 선택)
                     renderBoard();
                 }
             }
         }
     }
 
-    // ===== 스와이프 이동 로직 =====
-    function move(dir) {
-        if(isGameOver || isProcessing || isSelectionMode) return; // 아이템 모드 중에는 스와이프 금지
-        isProcessing = true;
-        let moved = false, mergedPositions = [], destroyedPositions = [];
-        let newGrid = JSON.parse(JSON.stringify(grid));
-
-        const slide = (row) => {
-            let arr = row.filter(val => val !== 0);
-            let mergedArr = [];
-            for(let i=0; i<arr.length; i++){
-                if(arr[i] === arr[i+1] && arr[i] !== 0) {
-                    let currentTier = arr[i];
-                    if(currentTier === 7) {
-                        createFloatingScore(0, 0, TILE_DATA[7].points);
-                        destroyedPositions.push(true); mergedArr.push(0);
-                        i++;
-                    } else if(currentTier === 103) {
-                        // 온쉼표(아이템)끼리는 저절로 합쳐지지 않게 막음
-                        mergedArr.push(arr[i]);
-                    } else {
-                        let nextTier = currentTier + 1;
-                        mergedArr.push(nextTier);
-                        createFloatingScore(0, 0, TILE_DATA[currentTier].points); 
-                        i++;
-                    }
-                } else { mergedArr.push(arr[i]); }
-            }
-            while(mergedArr.length < 4) mergedArr.push(0);
-            return mergedArr;
-        };
-
-        if(dir === 'left') { for(let r=0; r<4; r++) { let res = slide(newGrid[r]); if(newGrid[r].join(',') !== res.join(',')) moved = true; newGrid[r] = res; } }
-        else if(dir === 'right') { for(let r=0; r<4; r++) { let res = slide(newGrid[r].slice().reverse()).reverse(); if(newGrid[r].join(',') !== res.join(',')) moved = true; newGrid[r] = res; } }
-        else if(dir === 'up') { for(let c=0; c<4; c++) { let col = [newGrid[0][c], newGrid[1][c], newGrid[2][c], newGrid[3][c]]; let res = slide(col); for(let r=0; r<4; r++) { if(newGrid[r][c] !== res[r]) moved = true; newGrid[r][c] = res[r]; } } }
-        else if(dir === 'down') { for(let c=0; c<4; c++) { let col = [newGrid[0][c], newGrid[1][c], newGrid[2][c], newGrid[3][c]]; let res = slide(col.reverse()).reverse(); for(let r=0; r<4; r++) { if(newGrid[r][c] !== res[r]) moved = true; newGrid[r][c] = res[r]; } } }
-
-        if(moved) {
-            grid = newGrid; spawnTile(); renderBoard(mergedPositions, []);
-            let isFull = true, canMerge = false;
-            for(let r=0; r<4; r++) for(let c=0; c<4; c++) {
-                if(grid[r][c] === 0) isFull = false;
-                if(c<3 && grid[r][c] === grid[r][c+1] && grid[r][c] !== 103) canMerge = true;
-                if(r<3 && grid[r][c] === grid[r+1][c] && grid[r][c] !== 103) canMerge = true;
-            }
-            if(isFull && !canMerge) setTimeout(endGame, 500);
-        }
-        setTimeout(() => { isProcessing = false; }, 150);
-    }
-
-    // ===== 입력(마우스, 터치, 키보드) 이벤트 =====
-    let isDragging = false, startX = 0, startY = 0;
+    // ===== 드래그 앤 드롭 로직 =====
+    let dragEl = null;
+    let dragOrigin = null; // {r, c}
+    let dragOffset = {x: 0, y: 0};
+    let dragStartTime = 0;
 
     boardWrapper.addEventListener('pointerdown', (e) => {
-        isDragging = true; startX = e.clientX; startY = e.clientY;
+        if(isGameOver || isSelectionMode) return; // 아이템 모드 중에는 드래그 불가
+        
+        let target = e.target.closest('.tile');
+        if(!target) return;
+
+        let r = parseInt(target.dataset.r);
+        let c = parseInt(target.dataset.c);
+        
+        dragOrigin = {r, c};
+        dragEl = target;
+        dragStartTime = performance.now();
+
+        // 마우스와 타일 간의 오프셋 계산하여 자연스럽게 잡기
+        let rect = dragEl.getBoundingClientRect();
+        dragOffset.x = e.clientX - rect.left;
+        dragOffset.y = e.clientY - rect.top;
+
+        // 드래그 시작 시각 효과
+        dragEl.classList.add('dragging');
+        dragEl.style.pointerEvents = 'none'; // 아래 요소 판별을 위해 자체 터치 이벤트 무시
+    });
+
+    boardWrapper.addEventListener('pointermove', (e) => {
+        if(!dragEl || isGameOver) return;
+        
+        // 보드 기준 절대 좌표로 이동
+        let boardRect = boardWrapper.getBoundingClientRect();
+        let x = e.clientX - boardRect.left - dragOffset.x;
+        let y = e.clientY - boardRect.top - dragOffset.y;
+        
+        dragEl.style.left = `${x}px`;
+        dragEl.style.top = `${y}px`;
     });
 
     boardWrapper.addEventListener('pointerup', (e) => {
-        if(!isDragging || isGameOver) return;
-        isDragging = false;
-        let dx = e.clientX - startX; let dy = e.clientY - startY;
+        if(!dragEl) return;
+        
+        let boardRect = boardWrapper.getBoundingClientRect();
+        let dropX = e.clientX - boardRect.left;
+        let dropY = e.clientY - boardRect.top;
+        
+        let targetC = Math.floor(dropX / (boardRect.width / 4));
+        let targetR = Math.floor(dropY / (boardRect.height / 4));
+        
+        let timeElapsed = performance.now() - dragStartTime;
 
-        if(Math.abs(dx) > 30 || Math.abs(dy) > 30) {
-            // 스와이프 처리
-            if(Math.abs(dx) > Math.abs(dy)) { dx > 0 ? move('right') : move('left'); } 
-            else { dy > 0 ? move('down') : move('up'); }
-        } else {
-            // 클릭(탭) 처리 - 아이템 사용 기믹 연결
-            let rect = boardWrapper.getBoundingClientRect();
-            let col = Math.floor((e.clientX - rect.left) / (rect.width / 4));
-            let row = Math.floor((e.clientY - rect.top) / (rect.height / 4));
+        // 마우스/손가락을 놓을 때 초기화
+        dragEl.classList.remove('dragging');
+        dragEl.style.pointerEvents = 'auto';
+        let originalR = dragOrigin.r;
+        let originalC = dragOrigin.c;
+        dragEl = null;
+
+        // 드래그가 아닌 짧은 '탭(Tap)'으로 판정되면 아이템 사용 로직 실행
+        if(timeElapsed < 200 && targetR === originalR && targetC === originalC) {
+            handleTap(originalR, originalC);
+            return;
+        }
+
+        // 보드 바깥으로 드래그했으면 원위치
+        if(targetR < 0 || targetR >= 4 || targetC < 0 || targetC >= 4) {
+            renderBoard(); return;
+        }
+
+        // 자기 자신 자리에 놓았으면 무시
+        if(targetR === originalR && targetC === originalC) {
+            renderBoard(); return;
+        }
+
+        let sourceData = grid[originalR][originalC];
+        let targetData = grid[targetR][targetC];
+
+        if(targetData === 0) {
+            // 빈 공간으로 이동 (이동만 함)
+            grid[targetR][targetC] = sourceData;
+            grid[originalR][originalC] = 0;
+            // 타일 하나 이동할 때마다 새로운 타일 스폰
+            spawnTile();
+            renderBoard();
+        } 
+        else if (targetData.tier === sourceData.tier && sourceData.tier !== 103) {
+            // 합치기 성공! (온쉼표는 합치기 불가)
+            let nextTier = targetData.tier + 1;
             
-            if(col >= 0 && col < 4 && row >= 0 && row < 4) {
-                handleTap(row, col);
+            // 합쳐질 때 기호/글자 50% 확률로 새로 부여하여 카드 섞기
+            let nextDisplay = Math.random() < 0.5 ? 'symbol' : 'text';
+
+            grid[targetR][targetC] = { tier: nextTier, display: nextDisplay };
+            grid[originalR][originalC] = 0;
+            
+            createFloatingScore(targetR, targetC, TIER_DATA[sourceData.tier].points);
+            
+            // 4마디 블록(7) 생성 시 파괴 연출
+            let destroyed = [];
+            if(nextTier === 7) {
+                createFloatingScore(targetR, targetC, TIER_DATA[7].points);
+                grid[targetR][targetC] = 0; 
+                destroyed.push({r: targetR, c: targetC});
+            }
+
+            // 합친 후 새로운 타일 스폰
+            spawnTile();
+            renderBoard([{r: targetR, c: targetC}], destroyed);
+        } else {
+            // 다른 음표끼리는 합쳐지지 않음 (원위치)
+            renderBoard();
+        }
+
+        // 보드가 꽉 찼는지 검사 (게임오버 조건: 빈칸 없고 합칠 것도 없음)
+        checkGameOverCondition();
+    });
+
+    boardWrapper.addEventListener('pointerleave', () => {
+        if(dragEl) {
+            dragEl.classList.remove('dragging');
+            dragEl.style.pointerEvents = 'auto';
+            dragEl = null;
+            renderBoard();
+        }
+    });
+
+    function checkGameOverCondition() {
+        let isFull = true;
+        let canMerge = false;
+        
+        for(let r=0; r<4; r++) {
+            for(let c=0; c<4; c++) {
+                if(grid[r][c] === 0) isFull = false;
+                else {
+                    let current = grid[r][c];
+                    // 가로나 세로에 합칠 수 있는게 있는지 (온쉼표 103 제외)
+                    if(c < 3 && grid[r][c+1] !== 0 && grid[r][c+1].tier === current.tier && current.tier !== 103) canMerge = true;
+                    if(r < 3 && grid[r+1][c] !== 0 && grid[r+1][c].tier === current.tier && current.tier !== 103) canMerge = true;
+                }
             }
         }
-    });
-
-    boardWrapper.addEventListener('pointerleave', () => { isDragging = false; });
-
-    window.addEventListener('keydown', (e) => {
-        if(screens.game.classList.contains('active')) {
-            if(e.key === 'ArrowUp') move('up'); if(e.key === 'ArrowDown') move('down');
-            if(e.key === 'ArrowLeft') move('left'); if(e.key === 'ArrowRight') move('right');
+        if(isFull && !canMerge) {
+            setTimeout(endGame, 500);
         }
-    });
+    }
 </script>
 </body>
 </html>
