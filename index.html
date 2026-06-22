@@ -9,7 +9,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore-compat.js"></script>
 
     <style>
-        /* Noto Music 폰트로 정확한 음악 기호 렌더링, 텍스트는 Noto Sans KR 사용 */
         @import url('https://fonts.googleapis.com/css2?family=Noto+Music&family=Nunito:wght@700;900&family=Noto+Sans+KR:wght@500;700;900&display=swap');
         
         :root {
@@ -34,7 +33,6 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
 
-        /* 화면 전환 처리 */
         .screen {
             display: none; flex-direction: column; align-items: center; justify-content: center;
             width: 100%; height: 100%; padding: 20px;
@@ -72,7 +70,6 @@
         .info-box .label { font-size: 0.9rem; color: #ffd1dc; }
         .info-box .value { font-size: 1.5rem; font-weight: 900; }
 
-        /* 게임 보드 */
         .board-wrapper {
             position: relative; background: var(--board-bg); padding: 10px; border-radius: 20px;
             box-shadow: 0 15px 35px rgba(0,0,0,0.4); backdrop-filter: blur(15px);
@@ -92,8 +89,8 @@
             border-radius: 15px; display: flex; align-items: center; justify-content: center;
             font-weight: 700; transition: transform 0.15s ease-out, box-shadow 0.2s, left 0.2s, top 0.2s;
             box-shadow: 0 10px 20px rgba(0,0,0,0.3); animation: popIn 0.3s ease-out; z-index: 10;
+            pointer-events: auto; /* 핵심 수정: 타일 자체는 터치를 인식하도록 수정 */
         }
-        /* 드래그 중인 타일은 애니메이션 해제 & 위로 띄움 */
         .tile.dragging {
             transition: none !important; z-index: 100 !important; transform: scale(1.1);
             box-shadow: 0 20px 40px rgba(0,0,0,0.5); opacity: 0.9;
@@ -101,14 +98,12 @@
         .tile.merged { animation: popMerge 0.3s ease-out; z-index: 20; }
         .tile.destroy { animation: popDestroy 0.4s ease-out forwards; }
 
-        /* 기호 디자인: 얇고 명확하게 */
         .tile .icon { 
             font-family: 'Noto Music', sans-serif;
             font-size: min(15vw, 4rem); line-height: 1; color: #222;
             text-shadow: 0 0 10px rgba(255,255,255,0.8);
-            font-weight: normal; /* 얇은 꼬리 유지 */
+            font-weight: normal; 
         }
-        /* 한글 카드 디자인 */
         .tile .text-card {
             font-family: 'Noto Sans KR', sans-serif;
             font-size: min(4vw, 1.1rem); line-height: 1.3; color: #111;
@@ -116,7 +111,6 @@
             text-shadow: 0 0 8px rgba(255,255,255,0.8);
         }
 
-        /* 타일 테마 */
         .tier-1 { background: linear-gradient(135deg, #74ebd5, #9face6); }
         .tier-2 { background: linear-gradient(135deg, #a18cd1, #fbc2eb); }
         .tier-3 { background: linear-gradient(135deg, #fbc2eb, #a6c1ee); }
@@ -125,15 +119,12 @@
         .tier-6 { background: linear-gradient(135deg, #f093fb, #f5576c); box-shadow: 0 0 20px #f093fb; }
         .tier-7 { background: linear-gradient(135deg, #ff0844, #ffb199); box-shadow: 0 0 30px #ff0844; }
 
-        /* 쉼표 테마 */
         .tier-100 { background: linear-gradient(135deg, #a8c0ff, #3f2b96); }
         .tier-101 { background: linear-gradient(135deg, #bdc3c7, #2c3e50); }
         .tier-102 { background: linear-gradient(135deg, #d4af37, #8a6a1c); }
-        /* 온쉼표 아이템 */
         .tier-103 { background: linear-gradient(135deg, #1f1c2c, #928dab); border: 2px solid #00ffcc; box-shadow: 0 0 15px #00ffcc; }
         .tier-103 .icon, .tier-103 .text-card { color: #fff; text-shadow: 0 0 10px #00ffcc; }
 
-        /* 선택 모드 효과 */
         .tile.active-item { animation: pulseItem 1s infinite; z-index: 30; }
         .tile.selected { transform: scale(0.85); box-shadow: 0 0 0 5px #ff2a85; }
 
@@ -167,7 +158,7 @@
         <h1>🎵 비트 머지 🎵</h1>
         <div class="instruction">
             <strong style="color: #ffd700;">[조작법]</strong> 기호나 글자 카드를 드래그해서 <strong>같은 단계</strong>의 카드 위에 올려 합치세요.<br><br>
-            <strong style="color: #00ffcc;">[아이템 사용법]</strong> 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 터치한 뒤 다른 음표들을 터치해 <strong>정확히 4박자</strong>를 채우면 전부 터지며 고득점을 얻습니다!
+            <strong style="color: #00ffcc;">[아이템 사용법]</strong> 쉼표를 합쳐 <strong>온쉼표(검은색)</strong>를 만드세요. 온쉼표를 <strong style="color: #ff2a85;">터치</strong>한 뒤 다른 음표들을 <strong style="color: #ff2a85;">터치</strong>해 <strong>정확히 4박자</strong>를 채우면 고득점을 얻습니다!
         </div>
         <input type="text" id="student-name" placeholder="학생 이름을 입력하세요" autocomplete="off" maxlength="10">
         <button onclick="startGame()">게임 시작하기 (2분)</button>
@@ -204,7 +195,6 @@
     </div>
 
 <script>
-    // ===== 기본 설정 및 Firebase =====
     const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT_ID.firebaseapp.com", projectId: "YOUR_PROJECT_ID" };
     let db = null; let isLocalMode = true;
 
@@ -215,7 +205,6 @@
 
     const GAME_DURATION = 120000; 
 
-    // 모든 타일(음표+쉼표) 데이터 정의 (16분음표 기호 단일형 𝅘𝅥𝅯 사용)
     const TIER_DATA = {
         1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
         2: { symbol: "♪", name: "8분<br>음표", beats: 0.5, points: 20 },
@@ -246,7 +235,6 @@
     }
     function goToMenu() { switchScreen('menu'); cancelAnimationFrame(animationFrameId); }
 
-    // ===== 대시보드 =====
     async function showTeacherBoard() {
         switchScreen('teacher');
         const tbody = document.getElementById('leaderboard-body');
@@ -267,19 +255,15 @@
         } catch(e) { tbody.innerHTML = "<tr><td colspan='4'>오류가 발생했습니다.</td></tr>"; }
     }
 
-    // ===== 게임 초기화 및 생성 =====
     function startGame() {
         const nameInput = document.getElementById('student-name').value.trim();
         if(!nameInput) return alert("이름을 입력해주세요!");
         studentName = nameInput;
         
-        // grid 배열에 이제 단순히 숫자가 아닌 { tier, displayType } 객체를 저장 (0은 빈칸)
         grid = [[0,0,0,0], [0,0,0,0], [0,0,0,0], [0,0,0,0]];
         score = 0; isGameOver = false; isSelectionMode = false; selectedRest = null; selectedNotes = [];
         
         tileContainer.innerHTML = ''; updateScore();
-        
-        // 시작 시 타일 3개 생성
         spawnTile(); spawnTile(); spawnTile(); 
         renderBoard();
 
@@ -289,7 +273,6 @@
         switchScreen('game');
     }
 
-    // 빈 공간 중 하나에 타일 생성 (글자와 기호 50:50 비율)
     function spawnTile() {
         let emptyCells = [];
         for(let r=0; r<4; r++) for(let c=0; c<4; c++) if(grid[r][c] === 0) emptyCells.push({r, c});
@@ -299,7 +282,6 @@
         let p = Math.random();
         let newTier;
         
-        // 80% 음표, 20% 쉼표
         if (p < 0.80) {
             let p2 = Math.random();
             newTier = (p2 < 0.6) ? 1 : ((p2 < 0.85) ? 2 : 3);
@@ -308,16 +290,13 @@
             newTier = (p2 < 0.6) ? 100 : 101;
         }
 
-        // 50% 확률로 글자 카드(text) 또는 기호 카드(symbol) 생성
         let displayType = Math.random() < 0.5 ? 'symbol' : 'text';
-
         grid[randCell.r][randCell.c] = { tier: newTier, display: displayType };
         return true;
     }
 
-    // ===== 화면 그리기 =====
     function renderBoard(mergedTiles = [], destroyedTiles = []) {
-        tileContainer.innerHTML = ''; // 드래그 이벤트 독립을 위해 매번 다시 그리지 않고 관리할 수도 있지만, 안정성을 위해 리렌더링
+        tileContainer.innerHTML = ''; 
         const getPos = (index) => `calc(${index * 25}% + ${index * 2.5}px)`;
 
         for(let r=0; r<4; r++) {
@@ -351,12 +330,10 @@
         tile.style.left = `calc(${c * 25}% + ${c * 2.5}px)`;
         tile.style.top = `calc(${r * 25}% + ${r * 2.5}px)`;
         
-        // 데이터 속성으로 위치 저장 (드래그 시 식별용)
         tile.dataset.r = r;
         tile.dataset.c = c;
         
         let data = TIER_DATA[tileData.tier];
-        // 설정된 디스플레이 타입에 따라 아이콘 또는 텍스트 렌더링
         if(tileData.display === 'text') {
             tile.innerHTML = `<div class="text-card">${data.name}</div>`;
         } else {
@@ -406,13 +383,11 @@
         } else if(db) { try { await db.collection("games").add(recordData); } catch (e) {} }
     }
 
-    // ===== 탭 (아이템 사용 기믹) =====
     function handleTap(r, c) {
         let tileData = grid[r][c];
         if(tileData === 0) return;
 
         if(!isSelectionMode) {
-            // 온쉼표(103) 터치 시 발동
             if(tileData.tier === 103) {
                 isSelectionMode = true; selectedRest = {r, c}; renderBoard();
             }
@@ -433,7 +408,6 @@
                     grid[selectedRest.r][selectedRest.c] = 0; 
                     selectedNotes.forEach(pos => grid[pos.r][pos.c] = 0); 
                     isSelectionMode = false; selectedRest = null; selectedNotes = [];
-                    // 빈 공간 채우기
                     spawnTile(); spawnTile();
                     renderBoard([], [{r, c}]); 
                 } else if(sum > 4) {
@@ -448,39 +422,41 @@
         }
     }
 
-    // ===== 드래그 앤 드롭 로직 =====
     let dragEl = null;
-    let dragOrigin = null; // {r, c}
+    let dragOrigin = null; 
     let dragOffset = {x: 0, y: 0};
     let dragStartTime = 0;
 
     boardWrapper.addEventListener('pointerdown', (e) => {
-        if(isGameOver || isSelectionMode) return; // 아이템 모드 중에는 드래그 불가
+        if(isGameOver) return; 
         
         let target = e.target.closest('.tile');
         if(!target) return;
 
         let r = parseInt(target.dataset.r);
         let c = parseInt(target.dataset.c);
+
+        // 핵심 수정: 선택 모드일 때는 드래그를 시작하지 않고 바로 탭(터치) 기능 실행
+        if (isSelectionMode) {
+            handleTap(r, c);
+            return;
+        }
         
         dragOrigin = {r, c};
         dragEl = target;
         dragStartTime = performance.now();
 
-        // 마우스와 타일 간의 오프셋 계산하여 자연스럽게 잡기
         let rect = dragEl.getBoundingClientRect();
         dragOffset.x = e.clientX - rect.left;
         dragOffset.y = e.clientY - rect.top;
 
-        // 드래그 시작 시각 효과
         dragEl.classList.add('dragging');
-        dragEl.style.pointerEvents = 'none'; // 아래 요소 판별을 위해 자체 터치 이벤트 무시
+        dragEl.style.pointerEvents = 'none'; 
     });
 
     boardWrapper.addEventListener('pointermove', (e) => {
         if(!dragEl || isGameOver) return;
         
-        // 보드 기준 절대 좌표로 이동
         let boardRect = boardWrapper.getBoundingClientRect();
         let x = e.clientX - boardRect.left - dragOffset.x;
         let y = e.clientY - boardRect.top - dragOffset.y;
@@ -501,25 +477,22 @@
         
         let timeElapsed = performance.now() - dragStartTime;
 
-        // 마우스/손가락을 놓을 때 초기화
         dragEl.classList.remove('dragging');
-        dragEl.style.pointerEvents = 'auto';
+        dragEl.style.pointerEvents = 'auto'; // 복구
         let originalR = dragOrigin.r;
         let originalC = dragOrigin.c;
         dragEl = null;
 
-        // 드래그가 아닌 짧은 '탭(Tap)'으로 판정되면 아이템 사용 로직 실행
-        if(timeElapsed < 200 && targetR === originalR && targetC === originalC) {
+        // 핵심 수정: 짧은 탭(250ms 이하) 판정 후 제자리일 경우에만 아이템 발동 연결
+        if(timeElapsed < 250 && targetR === originalR && targetC === originalC) {
             handleTap(originalR, originalC);
             return;
         }
 
-        // 보드 바깥으로 드래그했으면 원위치
         if(targetR < 0 || targetR >= 4 || targetC < 0 || targetC >= 4) {
             renderBoard(); return;
         }
 
-        // 자기 자신 자리에 놓았으면 무시
         if(targetR === originalR && targetC === originalC) {
             renderBoard(); return;
         }
@@ -528,18 +501,13 @@
         let targetData = grid[targetR][targetC];
 
         if(targetData === 0) {
-            // 빈 공간으로 이동 (이동만 함)
             grid[targetR][targetC] = sourceData;
             grid[originalR][originalC] = 0;
-            // 타일 하나 이동할 때마다 새로운 타일 스폰
             spawnTile();
             renderBoard();
         } 
         else if (targetData.tier === sourceData.tier && sourceData.tier !== 103) {
-            // 합치기 성공! (온쉼표는 합치기 불가)
             let nextTier = targetData.tier + 1;
-            
-            // 합쳐질 때 기호/글자 50% 확률로 새로 부여하여 카드 섞기
             let nextDisplay = Math.random() < 0.5 ? 'symbol' : 'text';
 
             grid[targetR][targetC] = { tier: nextTier, display: nextDisplay };
@@ -547,7 +515,6 @@
             
             createFloatingScore(targetR, targetC, TIER_DATA[sourceData.tier].points);
             
-            // 4마디 블록(7) 생성 시 파괴 연출
             let destroyed = [];
             if(nextTier === 7) {
                 createFloatingScore(targetR, targetC, TIER_DATA[7].points);
@@ -555,15 +522,12 @@
                 destroyed.push({r: targetR, c: targetC});
             }
 
-            // 합친 후 새로운 타일 스폰
             spawnTile();
             renderBoard([{r: targetR, c: targetC}], destroyed);
         } else {
-            // 다른 음표끼리는 합쳐지지 않음 (원위치)
             renderBoard();
         }
 
-        // 보드가 꽉 찼는지 검사 (게임오버 조건: 빈칸 없고 합칠 것도 없음)
         checkGameOverCondition();
     });
 
@@ -585,7 +549,6 @@
                 if(grid[r][c] === 0) isFull = false;
                 else {
                     let current = grid[r][c];
-                    // 가로나 세로에 합칠 수 있는게 있는지 (온쉼표 103 제외)
                     if(c < 3 && grid[r][c+1] !== 0 && grid[r][c+1].tier === current.tier && current.tier !== 103) canMerge = true;
                     if(r < 3 && grid[r+1][c] !== 0 && grid[r+1][c].tier === current.tier && current.tier !== 103) canMerge = true;
                 }
