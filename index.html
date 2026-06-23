@@ -209,21 +209,36 @@
     </div>
 
 <script>
-    const firebaseConfig = { apiKey: "YOUR_API_KEY", authDomain: "YOUR_PROJECT_ID.firebaseapp.com", projectId: "YOUR_PROJECT_ID" };
-    let db = null; let isLocalMode = true;
+    // 전달해주신 Firebase 정보 적용 완료
+    const firebaseConfig = {
+        apiKey: "AIzaSyAAxLMAJ-sSHezW0G5Xv8mpjU5MgxpqK9g",
+        authDomain: "beatmerge-b5bef.firebaseapp.com",
+        projectId: "beatmerge-b5bef",
+        storageBucket: "beatmerge-b5bef.firebasestorage.app",
+        messagingSenderId: "250231475035",
+        appId: "1:250231475035:web:50d14ca957309548dea87e",
+        measurementId: "G-T02JJ1QS2P"
+    };
 
-    if (firebaseConfig.apiKey !== "YOUR_API_KEY") {
-        try { firebase.initializeApp(firebaseConfig); db = firebase.firestore(); isLocalMode = false; } 
-        catch(e) { console.warn("Firebase 로컬 모드로 전환합니다."); }
+    let db = null; 
+    let isLocalMode = false; // Firebase 데이터베이스 우선 연동
+
+    try { 
+        // Firebase Compat API 형태로 초기화
+        firebase.initializeApp(firebaseConfig); 
+        db = firebase.firestore(); 
+    } catch(e) { 
+        console.warn("Firebase 연동 실패로 로컬 모드로 전환합니다.", e); 
+        isLocalMode = true;
     }
 
     const GAME_DURATION = 120000; 
 
     const TIER_DATA = {
-        1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
-        2: { symbol: "𝅘𝅥𝅮", name: "8분<br>음표", beats: 0.5, points: 20 },
-        3: { symbol: "𝅘𝅥", name: "4분<br>음표", beats: 1, points: 40 },
-        4: { symbol: "𝅗𝅥", name: "2분<br>음표", beats: 2, points: 80 },
+        1: { symbol: "𝅘𝅥𝅯", name: "16분<br>음표", beats: 0.25, points: 10 },
+        2: { symbol: "𝅘𝅥𝅮", name: "8분<br>음표", beats: 0.5, points: 20 },
+        3: { symbol: "𝅘𝅥", name: "4분<br>음표", beats: 1, points: 40 },
+        4: { symbol: "𝅗𝅥", name: "2분<br>음표", beats: 2, points: 80 },
         5: { symbol: "𝅝", name: "온음표", beats: 4, points: 160 },
         6: { symbol: "⭐", name: "2마디", beats: 8, points: 700 },
         7: { symbol: "☄️", name: "4마디", beats: 16, points: 900 },
@@ -259,10 +274,10 @@
         tbody.innerHTML = "<tr><td colspan='4'>데이터 불러오는 중...</td></tr>";
         try {
             let dataList = [];
-            if (isLocalMode) {
+            if (isLocalMode || !db) {
                 dataList = JSON.parse(localStorage.getItem("beatMergeRecords") || "[]");
                 dataList.sort((a, b) => b.score - a.score);
-            } else if(db) {
+            } else {
                 const snapshot = await db.collection("games").orderBy("score", "desc").limit(50).get();
                 snapshot.forEach(doc => dataList.push(doc.data()));
             }
@@ -427,10 +442,17 @@
         switchScreen('result');
 
         const recordData = { name: studentName, score: score, date: new Date().toISOString() };
-        if (isLocalMode) {
+        
+        if (isLocalMode || !db) {
             let records = JSON.parse(localStorage.getItem("beatMergeRecords") || "[]");
             records.push(recordData); localStorage.setItem("beatMergeRecords", JSON.stringify(records));
-        } else if(db) { try { await db.collection("games").add(recordData); } catch (e) {} }
+        } else { 
+            try { 
+                await db.collection("games").add(recordData); 
+            } catch (e) {
+                console.error("데이터 저장 실패: ", e);
+            } 
+        }
     }
 
     function handleTap(r, c) {
@@ -594,14 +616,14 @@
                         isPerfect = (sourceData.display !== targetData.display); 
                         gainedPoints = TIER_DATA[sourceData.tier].points + TIER_DATA[targetData.tier].points;
                         if (isPerfect) { gainedPoints *= 2; customMsg = "박자 완성! x2"; }
-                        else { customMsg = "박자 완성!"; isPerfect = true; } // 특수 이펙트를 위해 isPerfect true 처리
+                        else { customMsg = "박자 완성!"; isPerfect = true; } 
                     }
                 }
             }
 
             // 병합 성공 시 처리
             if (nextTier) {
-                grid[targetR][targetC] = { tier: nextTier, display: 'symbol', isDotted: false }; // 완성된 음표는 무조건 기호 형태, 점음표 제거됨
+                grid[targetR][targetC] = { tier: nextTier, display: 'symbol', isDotted: false }; 
                 grid[originalR][originalC] = 0;
                 
                 createFloatingScore(targetR, targetC, gainedPoints, isPerfect, customMsg);
@@ -616,7 +638,7 @@
                 spawnTile();
                 renderBoard([{r: targetR, c: targetC}], destroyed);
             } else {
-                renderBoard(); // 병합 불가 시 제자리
+                renderBoard(); 
             }
         }
 
@@ -631,7 +653,6 @@
         }
     });
 
-    // 게임 오버 조건 판별 함수도 새로운 병합 규칙에 맞춰 업데이트
     function checkGameOverCondition() {
         let isFull = true;
         let canMerge = false;
